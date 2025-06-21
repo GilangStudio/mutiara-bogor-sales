@@ -1,0 +1,31 @@
+# Dependency directories
+node_modules/
+.nuxt/
+.output/
+dist/
+
+# Log files
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# IDE / editor directories
+.vscode/
+.idea/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Yarn integrity file
+.yarn-integrity
+
+# NPM package-lock
+package-lock.json
+
+# Nuxt build output
+.nuxt/
+dist/
