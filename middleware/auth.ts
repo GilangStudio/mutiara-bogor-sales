@@ -1,5 +1,10 @@
 // middleware/auth.ts
 export default defineNuxtRouteMiddleware((to, from) => {
+    // Skip middleware di server side untuk mencegah hydration mismatch
+    if (process.server) {
+        return
+    }
+
     const authStore = useAuthStore()
 
     // Check if user is authenticated

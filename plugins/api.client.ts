@@ -1,11 +1,14 @@
 import { useAuthStore } from "../stores/auth"
 
 export default defineNuxtPlugin(() => {
+    // Hanya jalankan di client side
+    if (process.server) return
+
     const authStore = useAuthStore()
     const config = useRuntimeConfig()
 
     // HTTP interceptor untuk menambahkan authorization header
-    $fetch.create({
+    const api = $fetch.create({
         baseURL: config.public.apiBase,
         onRequest({ request, options }) {
             // Add authorization header if token exists
@@ -25,4 +28,11 @@ export default defineNuxtPlugin(() => {
             }
         }
     })
+
+    // Provide the api instance
+    return {
+        provide: {
+            api
+        }
+    }
 })

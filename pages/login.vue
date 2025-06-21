@@ -144,10 +144,11 @@ const validateForm = () => {
     if (!form.password.trim()) {
         errors.password = 'Password wajib diisi'
         isValid = false
-    } else if (form.password.length < 6) {
-        errors.password = 'Password minimal 6 karakter'
-        isValid = false
-    }
+    } 
+    // else if (form.password.length < 6) {
+    //     errors.password = 'Password minimal 6 karakter'
+    //     isValid = false
+    // }
 
     return isValid
 }

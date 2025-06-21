@@ -25,13 +25,14 @@ export const useAuthStore = defineStore('auth', {
         user: null as User | null,
         token: null as string | null,
         isAuthenticated: false,
-        isLoading: false
+        isLoading: false,
+        initialized: false // Tambahkan flag untuk tracking inisialisasi
     }),
 
     getters: {
         getUser: (state) => state.user,
         getToken: (state) => state.token,
-        isLoggedIn: (state) => state.isAuthenticated
+        isLoggedIn: (state) => state.isAuthenticated && state.initialized
     },
 
     actions: {
@@ -50,6 +51,7 @@ export const useAuthStore = defineStore('auth', {
                     this.user = response.data
                     this.token = response.data.api_token
                     this.isAuthenticated = true
+                    this.initialized = true
 
                     // Simpan token di localStorage
                     if (process.client) {
@@ -76,6 +78,7 @@ export const useAuthStore = defineStore('auth', {
             this.user = null
             this.token = null
             this.isAuthenticated = false
+            this.initialized = true
 
             if (process.client) {
                 localStorage.removeItem('auth_token')
@@ -86,30 +89,38 @@ export const useAuthStore = defineStore('auth', {
         },
 
         checkAuth() {
-            if (process.client) {
+            // Hanya jalankan di client side
+            if (!process.client) {
+                return false
+            }
+
+            try {
                 const token = localStorage.getItem('auth_token')
                 const userData = localStorage.getItem('user_data')
 
                 if (token && userData) {
-                    try {
-                        this.token = token
-                        this.user = JSON.parse(userData)
-                        this.isAuthenticated = true
-                        return true
-                    } catch (error) {
-                        console.error('Error parsing user data:', error)
-                        this.clearAuth()
-                        return false
-                    }
+                    const parsedUser = JSON.parse(userData)
+                    this.token = token
+                    this.user = parsedUser
+                    this.isAuthenticated = true
+                    this.initialized = true
+                    return true
+                } else {
+                    this.initialized = true
+                    return false
                 }
+            } catch (error) {
+                console.error('Error parsing user data:', error)
+                this.clearAuth()
+                return false
             }
-            return false
         },
 
         clearAuth() {
             this.user = null
             this.token = null
             this.isAuthenticated = false
+            this.initialized = true
 
             if (process.client) {
                 localStorage.removeItem('auth_token')
