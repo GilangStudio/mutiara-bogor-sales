@@ -26,7 +26,7 @@ export const useAuthStore = defineStore('auth', {
         token: null as string | null,
         isAuthenticated: false,
         isLoading: false,
-        initialized: false // Tambahkan flag untuk tracking inisialisasi
+        initialized: false
     }),
 
     getters: {
@@ -48,17 +48,7 @@ export const useAuthStore = defineStore('auth', {
                 })
 
                 if (response.status === 'success' && response.data) {
-                    this.user = response.data
-                    this.token = response.data.api_token
-                    this.isAuthenticated = true
-                    this.initialized = true
-
-                    // Simpan token di localStorage
-                    if (process.client) {
-                        localStorage.setItem('auth_token', response.data.api_token)
-                        localStorage.setItem('user_data', JSON.stringify(response.data))
-                    }
-
+                    this.setAuthData(response.data)
                     return { success: true, data: response.data }
                 } else {
                     throw new Error(response.message || 'Login gagal')
@@ -75,39 +65,56 @@ export const useAuthStore = defineStore('auth', {
         },
 
         async logout() {
-            // Show loading state
             this.isLoading = true
 
             try {
                 const config = useRuntimeConfig()
 
-                // Hanya panggil API logout jika ada token
                 if (this.token) {
                     try {
-                        let response: any = await $fetch(`${config.public.apiBase}/logout`, {
+                        await $fetch(`${config.public.apiBase}/logout`, {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${this.token}`,
                                 'Content-Type': 'application/json'
                             }
                         })
-
-                        if (response.status !== 'success') {
-                            throw new Error(response.message || 'Logout gagal')
-                        }
-
-                        // Selalu bersihkan data lokal terlepas dari hasil API call
-                        this.clearAuth()
-
-                        // Redirect ke login page
-                        await navigateTo('/login')
-                    } catch (apiError: any) {
+                    } catch (apiError) {
+                        console.warn('Logout API error:', apiError)
+                        // Lanjutkan logout meskipun API error
                     }
                 }
+
+                // Selalu bersihkan data lokal
+                this.clearAuth()
+
+                // Redirect ke login
+                await navigateTo('/login')
+
             } catch (error: any) {
-                
+                console.error('Logout error:', error)
+                // Tetap clear auth meskipun error
+                this.clearAuth()
+                await navigateTo('/login')
             } finally {
                 this.isLoading = false
+            }
+        },
+
+        // Method untuk set auth data
+        setAuthData(userData: User) {
+            this.user = userData
+            this.token = userData.api_token
+            this.isAuthenticated = true
+            this.initialized = true
+
+            // Simpan ke localStorage
+            if (process.client) {
+                localStorage.setItem('auth_token', userData.api_token)
+                localStorage.setItem('user_data', JSON.stringify(userData))
+
+                // Set timestamp untuk tracking
+                localStorage.setItem('auth_timestamp', Date.now().toString())
             }
         },
 
@@ -120,20 +127,45 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const token = localStorage.getItem('auth_token')
                 const userData = localStorage.getItem('user_data')
+                const authTimestamp = localStorage.getItem('auth_timestamp')
 
-                if (token && userData) {
-                    const parsedUser = JSON.parse(userData)
-                    this.token = token
-                    this.user = parsedUser
-                    this.isAuthenticated = true
-                    this.initialized = true
-                    return true
-                } else {
+                if (!token || !userData) {
                     this.initialized = true
                     return false
                 }
+
+                // Optional: Check if auth data is too old (e.g., 30 days)
+                if (authTimestamp) {
+                    const maxAge = 30 * 24 * 60 * 60 * 1000 // 30 hari
+                    const age = Date.now() - parseInt(authTimestamp)
+
+                    if (age > maxAge) {
+                        console.log('Auth data expired, clearing...')
+                        this.clearAuth()
+                        return false
+                    }
+                }
+
+                // Validasi format user data
+                const parsedUser = JSON.parse(userData)
+
+                // Validasi struktur data user
+                if (!parsedUser.id || !parsedUser.api_token || !parsedUser.name || !parsedUser.phone) {
+                    console.error('Invalid user data structure')
+                    this.clearAuth()
+                    return false
+                }
+
+                // Set data ke store
+                this.user = parsedUser
+                this.token = token
+                this.isAuthenticated = true
+                this.initialized = true
+
+                return true
+
             } catch (error) {
-                console.error('Error parsing user data:', error)
+                console.error('Error parsing auth data:', error)
                 this.clearAuth()
                 return false
             }
@@ -148,34 +180,45 @@ export const useAuthStore = defineStore('auth', {
             if (process.client) {
                 localStorage.removeItem('auth_token')
                 localStorage.removeItem('user_data')
+                localStorage.removeItem('auth_timestamp')
+                localStorage.removeItem('last_token_check')
             }
         },
 
-        async refreshUser() {
-            if (!this.token) return false
+        // Method untuk validasi auth secara real-time
+        async validateAuth() {
+            if (!this.token || !process.client) {
+                return false
+            }
 
             try {
                 const config = useRuntimeConfig()
 
-                const response = await $fetch<{ data: User }>(`${config.public.apiBase}/user`, {
+                const response: any = await $fetch(`${config.public.apiBase}/user`, {
                     headers: {
                         'Authorization': `Bearer ${this.token}`
                     }
                 })
 
                 if (response.data) {
+                    // Update user data jika berubah
                     this.user = response.data
                     if (process.client) {
                         localStorage.setItem('user_data', JSON.stringify(response.data))
                     }
                     return true
                 }
+
                 return false
             } catch (error) {
-                console.error('Refresh user error:', error)
+                console.error('Auth validation failed:', error)
                 this.clearAuth()
                 return false
             }
+        },
+
+        async refreshUser() {
+            return await this.validateAuth()
         }
     }
 })
