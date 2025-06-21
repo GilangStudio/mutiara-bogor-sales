@@ -80,19 +80,21 @@
             <div class="space-y-3">
                 <h3 class="text-lg font-semibold text-foreground">Keamanan & Privasi</h3>
 
-                <div
-                    class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <Key class="h-5 w-5 text-red-600" />
+                <NuxtLink to="/settings/update-password" class="block">
+                        <div
+                            class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                    <Key class="h-5 w-5 text-red-600 dark:text-red-400" />
+                                </div>
+                                <div>
+                                    <div class="font-medium">Ubah Password</div>
+                                    <div class="text-sm text-muted-foreground">Perbarui password akun</div>
+                                </div>
+                            </div>
+                            <ChevronRight class="h-4 w-4 text-muted-foreground" />
                         </div>
-                        <div>
-                            <div class="font-medium">Ubah Password</div>
-                            <div class="text-sm text-muted-foreground">Perbarui password akun</div>
-                        </div>
-                    </div>
-                    <ChevronRight class="h-4 w-4 text-muted-foreground" />
-                </div>
+                    </NuxtLink>
 
                 <div
                     class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
