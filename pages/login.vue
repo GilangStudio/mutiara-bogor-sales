@@ -23,7 +23,7 @@
                             <div class="relative">
                                 <Phone
                                     class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <input id="phone" v-model="form.phone" type="tel" placeholder="08123456789"
+                                <input id="phone" v-model="form.phone" type="tel" placeholder="08123456789" autocomplete="off"
                                     class="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     :class="{
                                         'border-destructive focus:ring-destructive': errors.phone,
@@ -58,14 +58,6 @@
                         </div>
                     </div>
 
-                    <!-- Error Message -->
-                    <div v-if="errorMessage" class="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                        <div class="flex items-center gap-2">
-                            <AlertCircle class="h-4 w-4 text-destructive" />
-                            <p class="text-sm text-destructive">{{ errorMessage }}</p>
-                        </div>
-                    </div>
-
                     <!-- Submit Button -->
                     <button type="submit" :disabled="authStore.isLoading || !isFormValid"
                         class="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90">
@@ -83,12 +75,12 @@
                             Reset di sini
                         </NuxtLink>
                     </p>
-                    <div class="text-xs text-muted-foreground">
+                    <!-- <div class="text-xs text-muted-foreground">
                         Dengan masuk, Anda menyetujui
                         <button class="text-primary hover:underline">Syarat & Ketentuan</button>
                         dan
                         <button class="text-primary hover:underline">Kebijakan Privasi</button>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -96,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { Users, Phone, Lock, Eye, EyeOff, LogIn, Loader2, AlertCircle } from 'lucide-vue-next'
+import { Users, Phone, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-vue-next'
 
 // Middleware untuk guest
 definePageMeta({
@@ -104,8 +96,9 @@ definePageMeta({
     layout: false
 })
 
-// Store
+// Store dan Toast Helper
 const authStore = useAuthStore()
+const toast = useToast()
 
 // Form state
 const form = reactive({
@@ -114,7 +107,6 @@ const form = reactive({
 })
 
 const showPassword = ref(false)
-const errorMessage = ref('')
 const errors = reactive({
     phone: '',
     password: ''
@@ -129,7 +121,6 @@ const isFormValid = computed(() => {
 const validateForm = () => {
     errors.phone = ''
     errors.password = ''
-    errorMessage.value = ''
 
     let isValid = true
 
@@ -144,11 +135,7 @@ const validateForm = () => {
     if (!form.password.trim()) {
         errors.password = 'Password wajib diisi'
         isValid = false
-    } 
-    // else if (form.password.length < 6) {
-    //     errors.password = 'Password minimal 6 karakter'
-    //     isValid = false
-    // }
+    }
 
     return isValid
 }
@@ -162,9 +149,12 @@ const handleLogin = async () => {
     })
 
     if (result.success) {
+        // Show success toast dengan nama user
+        toast.loginSuccess(result.data?.name)
         await navigateTo('/')
     } else {
-        errorMessage.value = result.message || 'Login gagal'
+        // Show error toast
+        toast.loginError(result.message)
     }
 }
 

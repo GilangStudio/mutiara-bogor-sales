@@ -13,6 +13,9 @@
             </main>
             <BottomNavigation v-if="showBottomNav" />
         </div>
+
+        <!-- Toast Container - Always rendered -->
+        <ToastContainer />
     </div>
 </template>
 

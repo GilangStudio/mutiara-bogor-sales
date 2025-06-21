@@ -32,7 +32,7 @@
                             <div class="relative">
                                 <Phone
                                     class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <input id="phone" v-model="form.phone" type="tel" placeholder="08123456789"
+                                <input id="phone" v-model="form.phone" type="tel" placeholder="08123456789" autocomplete="off"
                                     class="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                     :class="{
                                         'border-destructive focus:ring-destructive': errors.phone,

@@ -75,17 +75,40 @@ export const useAuthStore = defineStore('auth', {
         },
 
         async logout() {
-            this.user = null
-            this.token = null
-            this.isAuthenticated = false
-            this.initialized = true
+            // Show loading state
+            this.isLoading = true
 
-            if (process.client) {
-                localStorage.removeItem('auth_token')
-                localStorage.removeItem('user_data')
+            try {
+                const config = useRuntimeConfig()
+
+                // Hanya panggil API logout jika ada token
+                if (this.token) {
+                    try {
+                        let response: any = await $fetch(`${config.public.apiBase}/logout`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        })
+
+                        if (response.status !== 'success') {
+                            throw new Error(response.message || 'Logout gagal')
+                        }
+
+                        // Selalu bersihkan data lokal terlepas dari hasil API call
+                        this.clearAuth()
+
+                        // Redirect ke login page
+                        await navigateTo('/login')
+                    } catch (apiError: any) {
+                    }
+                }
+            } catch (error: any) {
+                
+            } finally {
+                this.isLoading = false
             }
-
-            await navigateTo('/login')
         },
 
         checkAuth() {

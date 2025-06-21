@@ -30,15 +30,15 @@
                     </div>
                 </div>
 
-                <!-- Appearance & Themes Section -->
+                <!-- Appearance Section (Dark Mode Only) -->
                 <div class="bg-card border border-border rounded-lg p-4">
                     <h3 class="font-semibold mb-4 flex items-center gap-2">
                         <Palette class="h-4 w-4 text-primary" />
-                        Tampilan & Tema
+                        Tampilan
                     </h3>
 
                     <!-- Dark Mode Toggle -->
-                    <div class="mb-4 p-3 border border-border rounded-lg">
+                    <div class="p-3 border border-border rounded-lg">
                         <!-- Theme Mode Options -->
                         <div class="space-y-2">
                             <div @click="setColorMode('light')"
@@ -84,55 +84,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Theme Switcher -->
-                    <div class="border-t pt-4">
-                        <div class="flex items-center gap-2 mb-4">
-                            <Paintbrush class="h-4 w-4 text-primary" />
-                            <span class="text-sm font-medium">Pilih Tema Warna</span>
-                        </div>
-
-                        <!-- Theme Grid -->
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div v-for="theme in themes" :key="theme.id" @click="setTheme(theme.id)"
-                                class="relative p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105"
-                                :class="{
-                                    'border-primary bg-primary/5': currentTheme === theme.id,
-                                    'border-border hover:border-primary/50': currentTheme !== theme.id
-                                }">
-                                <!-- Theme Preview Circles -->
-                                <div class="flex items-center gap-1.5 mb-2">
-                                    <div class="w-3 h-3 rounded-full border border-white/20 shadow-sm"
-                                        :style="{ backgroundColor: theme.primary }"></div>
-                                    <div class="w-2.5 h-2.5 rounded-full border border-white/20 shadow-sm"
-                                        :style="{ backgroundColor: theme.secondary }"></div>
-                                    <div class="w-2 h-2 rounded-full border border-white/20 shadow-sm"
-                                        :style="{ backgroundColor: theme.accent }"></div>
-                                </div>
-
-                                <!-- Theme Name -->
-                                <div class="text-xs font-medium text-foreground">{{ theme.name }}</div>
-                                <div class="text-xs text-muted-foreground truncate">{{ theme.description }}</div>
-
-                                <!-- Active Indicator -->
-                                <div v-if="currentTheme === theme.id"
-                                    class="absolute top-2 right-2 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                                    <Check class="h-2.5 w-2.5 text-primary-foreground" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Current Theme Preview -->
-                        <div class="bg-accent/50 rounded-lg p-3">
-                            <div class="text-xs font-medium text-muted-foreground mb-2">Preview Tema Aktif</div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
-                                    <Star class="h-3 w-3 text-primary-foreground" />
-                                </div>
-                                <div class="text-sm">{{ currentThemeData?.name || 'Ocean Blue' }}</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- App Preferences Section -->
@@ -153,14 +104,15 @@
                                     <div class="text-xs text-muted-foreground">Notifikasi untuk leads baru</div>
                                 </div>
                             </div>
-                            <button
-                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                                <span
-                                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6" />
+                            <button @click="toggleNotification"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                                :class="notificationEnabled ? 'bg-primary' : 'bg-muted'">
+                                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                    :class="notificationEnabled ? 'translate-x-6' : 'translate-x-1'" />
                             </button>
                         </div>
 
-                        <div
+                        <div @click="clearCache"
                             class="flex items-center justify-between hover:bg-accent/50 p-2 rounded-lg transition-colors cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <div
@@ -186,7 +138,7 @@
                         Bantuan & Informasi
                     </h3>
                     <div class="space-y-3">
-                        <div
+                        <div @click="showGuide"
                             class="flex items-center justify-between hover:bg-accent/50 p-2 rounded-lg transition-colors cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <div
@@ -198,7 +150,7 @@
                             <ChevronRight class="h-4 w-4 text-muted-foreground" />
                         </div>
 
-                        <div
+                        <div @click="contactSupport"
                             class="flex items-center justify-between hover:bg-accent/50 p-2 rounded-lg transition-colors cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <div
@@ -210,7 +162,7 @@
                             <ChevronRight class="h-4 w-4 text-muted-foreground" />
                         </div>
 
-                        <div
+                        <div @click="showVersionInfo"
                             class="flex items-center justify-between hover:bg-accent/50 p-2 rounded-lg transition-colors cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <div
@@ -252,7 +204,6 @@ import {
     Settings,
     Bell,
     Palette,
-    Paintbrush,
     ChevronRight,
     Info,
     User as UserIcon,
@@ -262,7 +213,6 @@ import {
     Moon,
     Sun,
     Monitor,
-    Star,
     Check,
     HardDrive,
     BookOpen,
@@ -277,9 +227,13 @@ definePageMeta({
 
 // Stores
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 // Color mode for dark/light toggle
 const colorMode = useColorMode()
+
+// App preferences state
+const notificationEnabled = ref(true)
 
 // System theme detection
 const systemTheme = ref('light')
@@ -304,94 +258,42 @@ const detectSystemTheme = () => {
 const setColorMode = (mode) => {
     colorMode.preference = mode
 
+    // Show toast for theme change
+    const modeText = mode === 'light' ? 'terang' : mode === 'dark' ? 'gelap' : 'sistem'
+    toastStore.info(`Mode tampilan diubah ke ${modeText}`, 'Tampilan Diperbarui')
+
     // Apply theme changes immediately if needed
     if (mode === 'system') {
         detectSystemTheme()
     }
 }
 
-// Theme definitions
-const themes = [
-    {
-        id: 'ocean',
-        name: 'Ocean Blue',
-        description: 'Biru laut tenang',
-        primary: '#3b82f6',
-        secondary: '#f1f5f9',
-        accent: '#e2e8f0'
-    },
-    {
-        id: 'emerald',
-        name: 'Emerald Green',
-        description: 'Hijau emerald segar',
-        primary: '#059669',
-        secondary: '#f0fdf4',
-        accent: '#dcfce7'
-    },
-    {
-        id: 'sunset',
-        name: 'Sunset Orange',
-        description: 'Orange matahari',
-        primary: '#ea580c',
-        secondary: '#fefce8',
-        accent: '#fed7aa'
-    },
-    {
-        id: 'royal',
-        name: 'Royal Purple',
-        description: 'Ungu royal mewah',
-        primary: '#7c3aed',
-        secondary: '#faf5ff',
-        accent: '#e9d5ff'
-    }
-]
+// App preference functions
+const toggleNotification = () => {
+    notificationEnabled.value = !notificationEnabled.value
 
-// Current theme state
-const currentTheme = ref('ocean')
-
-// Get current theme data
-const currentThemeData = computed(() => {
-    return themes.find(theme => theme.id === currentTheme.value)
-})
-
-// Set theme function
-const setTheme = (themeId) => {
-    currentTheme.value = themeId
-    applyTheme(themeId)
-
-    // Save to localStorage
-    if (process.client) {
-        localStorage.setItem('selected-theme', themeId)
+    if (notificationEnabled.value) {
+        toastStore.success('Notifikasi push diaktifkan', 'Notifikasi Aktif')
+    } else {
+        toastStore.warning('Notifikasi push dinonaktifkan', 'Notifikasi Nonaktif')
     }
 }
 
-// Apply theme function with system theme support
-const applyTheme = (themeId) => {
-    if (process.client) {
-        const root = document.documentElement
+const clearCache = () => {
+    // Simulate cache clearing
+    toastStore.info('Cache dan data offline berhasil dibersihkan', 'Cache Dibersihkan')
+}
 
-        // Remove existing theme classes
-        themes.forEach(theme => {
-            root.classList.remove(`theme-${theme.id}`)
-        })
+const showGuide = () => {
+    toastStore.info('Panduan penggunaan akan segera tersedia', 'Coming Soon')
+}
 
-        // Add new theme class
-        root.classList.add(`theme-${themeId}`)
+const contactSupport = () => {
+    toastStore.info('Mengarahkan ke halaman support...', 'Hubungi Support')
+}
 
-        // Handle system theme if color mode is system
-        if (colorMode.value === 'system') {
-            detectSystemTheme()
-        }
-
-        // Update mobile container styles with a slight delay to ensure CSS variables are updated
-        setTimeout(() => {
-            const container = document.querySelector('.mobile-container')
-            if (container) {
-                container.style.background = 'hsl(var(--background))'
-                container.style.boxShadow = '0 0 0 1px hsl(var(--border))'
-            }
-        }, 100)
-    }
+const showVersionInfo = () => {
+    toastStore.info('CRM Sales v1.0.0 (Build 001)\nDikembangkan dengan ❤️', 'Informasi Versi')
 }
 
 // Logout function
@@ -399,21 +301,11 @@ const handleLogout = async () => {
     await authStore.logout()
 }
 
-// Initialize theme and system detection on mount
+// Initialize system detection on mount
 onMounted(() => {
     if (process.client) {
         // Detect system theme preference
         detectSystemTheme()
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('selected-theme') || 'ocean'
-        currentTheme.value = savedTheme
-        applyTheme(savedTheme)
-
-        // Watch for color mode changes to re-apply theme
-        watch(() => colorMode.value, () => {
-            applyTheme(currentTheme.value)
-        })
     }
 })
 
