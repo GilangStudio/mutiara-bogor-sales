@@ -1,4 +1,5 @@
 import { useToastStore } from "~/stores/toast"
+import { useLeadsStore } from "~/stores/leads"
 
 // plugins/stores.client.ts
 export default defineNuxtPlugin(() => {
@@ -11,11 +12,15 @@ export default defineNuxtPlugin(() => {
         // Initialize toast store
         const toastStore = useToastStore()
 
+        // Initialize leads store
+        const leadsStore = useLeadsStore()
+
         // Make stores globally available
         return {
             provide: {
                 authStore,
-                toastStore
+                toastStore,
+                leadsStore
             }
         }
     }
