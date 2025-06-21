@@ -36,12 +36,38 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const showBottomNav = computed(() => {
-    if (!hydrated.value) return false
+    if (!hydrated.value || !authStore.isAuthenticated) return false
 
-    // Don't show bottom nav on login page or if not authenticated
-    return route.path !== '/login' &&
-        route.path !== '/forgot-password' &&
-        authStore.isAuthenticated
+    // Halaman yang tidak menampilkan bottom navigation
+    const excludedRoutes = [
+        '/login',
+        '/forgot-password'
+    ]
+
+    // Halaman parent yang menampilkan bottom navigation
+    const parentRoutes = [
+        '/',           // Menu Utama
+        '/leads',      // Leads
+        '/settings'    // Pengaturan (hanya halaman utama settings)
+    ]
+
+    // Jika route ada di excluded routes, jangan tampilkan
+    if (excludedRoutes.includes(route.path)) {
+        return false
+    }
+
+    // Jika route adalah halaman parent, tampilkan
+    if (parentRoutes.includes(route.path)) {
+        return true
+    }
+
+    // Jika route adalah child dari settings (dimulai dengan /settings/ dan bukan /settings), jangan tampilkan
+    if (route.path.startsWith('/settings/')) {
+        return false
+    }
+
+    // Untuk route lainnya yang belum terdefinisi, jangan tampilkan bottom nav
+    return false
 })
 
 // Check authentication on app mount
