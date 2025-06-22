@@ -7,14 +7,19 @@ export interface Platform {
 export interface Lead {
     id: number
     name: string
-    mobile: string
+    phone: string
     email: string
     message: string
     leads_status: 'new' | 'process' | 'closing'
     leads_note: string
+    path_referral: string
     platform: Platform
     is_favorited: boolean
+    assignment_type: 'auto' | 'manual'
     date: string
+    created_at: string
+    formatted_phone: string
+    whatsapp_url: string
 }
 
 export interface LeadsStatusCount {
@@ -23,10 +28,51 @@ export interface LeadsStatusCount {
     closing: number
 }
 
-export interface LeadsData {
-    leads: Lead[]
+export interface PaginationMeta {
+    current_page: number
+    first_page_url: string
+    from: number
+    last_page: number
+    last_page_url: string
+    next_page_url: string | null
+    path: string
+    per_page: number
+    prev_page_url: string | null
+    to: number
+    total: number
+}
+
+export interface LeadsResponse {
+    leads: PaginationMeta & {
+        data: Lead[]
+    }
     total_leads_status: LeadsStatusCount
-    total_leads: number
+    filters_applied: {
+        search?: string
+        status?: string
+        platform_id?: number
+        assignment_type?: string
+        is_favorited?: boolean
+        date_from?: string
+        date_to?: string
+    }
+    summary: {
+        total_filtered: number
+        current_page_count: number
+        has_more_pages: boolean
+    }
+}
+
+export interface FilterParams {
+    search?: string
+    status?: 'new' | 'process' | 'closing'
+    platform_id?: number
+    assignment_type?: 'auto' | 'manual'
+    is_favorited?: boolean
+    date_from?: string
+    date_to?: string
+    page?: number
+    per_page?: number
 }
 
 export interface UpdateLeadData {
@@ -42,10 +88,31 @@ export const useLeadsStore = defineStore('leads', {
             process: 0,
             closing: 0
         } as LeadsStatusCount,
-        totalLeads: 0,
+        pagination: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 15,
+            total: 0,
+            has_more_pages: false
+        },
+        filters: {
+            search: '',
+            status: undefined,
+            platform_id: undefined,
+            assignment_type: undefined,
+            is_favorited: undefined,
+            date_from: undefined,
+            date_to: undefined
+        } as FilterParams,
         isLoading: false,
+        isLoadingMore: false,
         error: null as string | null,
-        lastFetch: null as Date | null
+        lastFetch: null as Date | null,
+        summary: {
+            total_filtered: 0,
+            current_page_count: 0,
+            has_more_pages: false
+        }
     }),
 
     getters: {
@@ -61,43 +128,56 @@ export const useLeadsStore = defineStore('leads', {
             return state.leads.filter(lead => lead.is_favorited)
         },
 
-        searchLeads: (state) => (query: string) => {
-            if (!query) return state.leads
-            
-            const searchTerm = query.toLowerCase()
-            return state.leads.filter(lead => 
-                lead.name.toLowerCase().includes(searchTerm) ||
-                lead.mobile.includes(searchTerm) ||
-                (lead.email && lead.email.toLowerCase().includes(searchTerm)) ||
-                (lead.message && lead.message.toLowerCase().includes(searchTerm))
-            )
+        hasNextPage: (state) => {
+            return state.pagination.current_page < state.pagination.last_page
+        },
+
+        canLoadMore: (state) => {
+            return state.hasNextPage && !state.isLoading && !state.isLoadingMore
         }
     },
 
     actions: {
-        async fetchLeads(forceRefresh = false) {
-            // Skip if data is fresh (less than 5 minutes old) and not forcing refresh
-            if (!forceRefresh && this.lastFetch && this.leads.length > 0) {
-                const now = new Date()
-                const diff = now.getTime() - this.lastFetch.getTime()
-                const fiveMinutes = 5 * 60 * 1000
-                
-                if (diff < fiveMinutes) {
-                    return { success: true, data: this.getStoreData() }
-                }
+        async fetchLeads(params: FilterParams = {}, reset = true) {
+            // Jika reset = false, berarti load more (pagination)
+            if (reset) {
+                this.isLoading = true
+                this.error = null
+                this.leads = []
+                this.pagination.current_page = 1
+            } else {
+                this.isLoadingMore = true
             }
-
-            this.isLoading = true
-            this.error = null
 
             try {
                 const { $api }: any = useNuxtApp()
+                
+                // Merge dengan filter yang sudah ada jika tidak reset
+                const finalParams = {
+                    ...this.filters,
+                    ...params,
+                    page: reset ? 1 : this.pagination.current_page + 1,
+                    per_page: this.pagination.per_page
+                }
+
+                // Bersihkan parameter yang undefined
+                Object.keys(finalParams).forEach(key => {
+                    if (finalParams[key] === undefined || finalParams[key] === '') {
+                        delete finalParams[key]
+                    }
+                })
+
                 const response = await $api('/get_leads', {
-                    method: 'GET'
+                    method: 'GET',
+                    query: finalParams
                 })
 
                 if (response.status === 'success' && response.data) {
-                    this.setLeadsData(response.data)
+                    if (reset) {
+                        this.setLeadsData(response.data, finalParams)
+                    } else {
+                        this.appendLeadsData(response.data)
+                    }
                     return { success: true, data: response.data }
                 } else {
                     throw new Error(response.message || 'Gagal mengambil data leads')
@@ -108,7 +188,63 @@ export const useLeadsStore = defineStore('leads', {
                 return { success: false, error: this.error }
             } finally {
                 this.isLoading = false
+                this.isLoadingMore = false
             }
+        },
+
+        async loadMoreLeads() {
+            if (!this.canLoadMore) return
+
+            return await this.fetchLeads({}, false)
+        },
+
+        async searchLeads(searchQuery: string) {
+            this.filters.search = searchQuery
+            return await this.fetchLeads({ search: searchQuery }, true)
+        },
+
+        async filterByStatus(status?: 'new' | 'process' | 'closing') {
+            this.filters.status = status
+            return await this.fetchLeads({ status }, true)
+        },
+
+        async filterByPlatform(platformId?: number) {
+            this.filters.platform_id = platformId
+            return await this.fetchLeads({ platform_id: platformId }, true)
+        },
+
+        async filterByAssignmentType(assignmentType?: 'auto' | 'manual') {
+            this.filters.assignment_type = assignmentType
+            return await this.fetchLeads({ assignment_type: assignmentType }, true)
+        },
+
+        async filterByFavorite(isFavorited?: boolean) {
+            this.filters.is_favorited = isFavorited
+            return await this.fetchLeads({ is_favorited: isFavorited }, true)
+        },
+
+        async filterByDateRange(dateFrom?: string, dateTo?: string) {
+            this.filters.date_from = dateFrom
+            this.filters.date_to = dateTo
+            return await this.fetchLeads({ date_from: dateFrom, date_to: dateTo }, true)
+        },
+
+        async applyFilters(filters: FilterParams) {
+            this.filters = { ...this.filters, ...filters }
+            return await this.fetchLeads(filters, true)
+        },
+
+        async clearFilters() {
+            this.filters = {
+                search: '',
+                status: undefined,
+                platform_id: undefined,
+                assignment_type: undefined,
+                is_favorited: undefined,
+                date_from: undefined,
+                date_to: undefined
+            }
+            return await this.fetchLeads({}, true)
         },
 
         async toggleFavorite(leadId: number) {
@@ -206,12 +342,37 @@ export const useLeadsStore = defineStore('leads', {
             }
         },
 
-        setLeadsData(data: LeadsData) {
-            this.leads = data.leads
+        setLeadsData(data: LeadsResponse, appliedFilters: FilterParams) {
+            this.leads = data.leads.data
             this.totalLeadsStatus = data.total_leads_status
-            this.totalLeads = data.total_leads
+            this.pagination = {
+                current_page: data.leads.current_page,
+                last_page: data.leads.last_page,
+                per_page: data.leads.per_page,
+                total: data.leads.total,
+                has_more_pages: data.summary.has_more_pages
+            }
+            this.summary = data.summary
+            this.filters = { ...this.filters, ...appliedFilters }
             this.lastFetch = new Date()
             this.error = null
+        },
+
+        appendLeadsData(data: LeadsResponse) {
+            // Merge new leads, avoiding duplicates
+            const newLeads = data.leads.data.filter(newLead => 
+                !this.leads.some(existingLead => existingLead.id === newLead.id)
+            )
+            
+            this.leads.push(...newLeads)
+            this.pagination = {
+                current_page: data.leads.current_page,
+                last_page: data.leads.last_page,
+                per_page: data.leads.per_page,
+                total: data.leads.total,
+                has_more_pages: data.summary.has_more_pages
+            }
+            this.summary = data.summary
         },
 
         updateStatusCounts(fromStatus: 'new' | 'process' | 'closing', toStatus: 'new' | 'process' | 'closing') {
@@ -226,25 +387,37 @@ export const useLeadsStore = defineStore('leads', {
             this.totalLeadsStatus[toStatus]++
         },
 
-        getStoreData(): LeadsData {
-            return {
-                leads: this.leads,
-                total_leads_status: this.totalLeadsStatus,
-                total_leads: this.totalLeads
-            }
-        },
-
         clearLeads() {
             this.leads = []
             this.totalLeadsStatus = { new: 0, process: 0, closing: 0 }
-            this.totalLeads = 0
+            this.pagination = {
+                current_page: 1,
+                last_page: 1,
+                per_page: 15,
+                total: 0,
+                has_more_pages: false
+            }
+            this.summary = {
+                total_filtered: 0,
+                current_page_count: 0,
+                has_more_pages: false
+            }
+            this.filters = {
+                search: '',
+                status: undefined,
+                platform_id: undefined,
+                assignment_type: undefined,
+                is_favorited: undefined,
+                date_from: undefined,
+                date_to: undefined
+            }
             this.error = null
             this.lastFetch = null
         },
 
         // Helper method untuk refresh data
         async refreshLeads() {
-            return await this.fetchLeads(true)
+            return await this.fetchLeads(this.filters, true)
         }
     }
 })
