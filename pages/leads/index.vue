@@ -551,7 +551,7 @@ const toggleAccordion = (type: 'message' | 'note', leadId: number) => {
 }
 
 const openLeadDetail = (lead: any) => {
-    toast.info('Halaman detail lead akan segera tersedia', 'Coming Soon')
+    navigateTo(`/leads/${lead.id}`)
 }
 
 const openWhatsApp = (whatsappUrl: string) => {
