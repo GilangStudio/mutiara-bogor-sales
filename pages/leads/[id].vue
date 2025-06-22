@@ -373,17 +373,36 @@ const toggleFavorite = async () => {
     try {
         isToggling.value = true
         
-        // Update store jika lead ada di store
-        await leadsStore.toggleFavorite(parseInt(leadId.value as string))
+        const { $api }: any = useNuxtApp()
         
-        // Update local state
-        leadDetail.value.is_favorited = !leadDetail.value.is_favorited
-        
-        toast.success(
-            leadDetail.value.is_favorited ? 'Lead ditambahkan ke favorit' : 'Lead dihapus dari favorit', 
-            'Favorit Diperbarui'
-        )
+        // Call API directly instead of using store
+        const response = await $api('/toggle_favorite', {
+            method: 'POST',
+            body: {
+                lead_id: parseInt(leadId.value as string),
+                is_favorited: !leadDetail.value.is_favorited
+            }
+        })
+
+        if (response.status === 'success') {
+            // Update local state
+            leadDetail.value.is_favorited = !leadDetail.value.is_favorited
+            
+            // Update store jika lead ada di store (optional)
+            const leadInStore = leadsStore.getLeadById(parseInt(leadId.value as string))
+            if (leadInStore) {
+                leadInStore.is_favorited = leadDetail.value.is_favorited
+            }
+            
+            toast.success(
+                leadDetail.value.is_favorited ? 'Lead ditambahkan ke favorit' : 'Lead dihapus dari favorit', 
+                'Favorit Diperbarui'
+            )
+        } else {
+            throw new Error(response.message || 'Gagal mengubah status favorit')
+        }
     } catch (error: any) {
+        console.error('Error toggling favorite:', error)
         toast.error(error.message || 'Gagal mengubah status favorit', 'Error')
     } finally {
         isToggling.value = false
