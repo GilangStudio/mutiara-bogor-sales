@@ -182,7 +182,7 @@
                             <div class="space-y-1 mb-2">
                                 <div class="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Phone class="h-3 w-3" />
-                                    <span>{{ lead.mobile }}</span>
+                                    <span>{{ lead.phone }}</span>
                                     <button 
                                         v-if="lead.whatsapp_url"
                                         @click.stop="openWhatsApp(lead.whatsapp_url)"
@@ -218,7 +218,7 @@
                         <div class="flex flex-col items-end gap-2 ml-2">
                             <span 
                                 class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                                :class="getStatusBadgeClass(lead.leads_status)"
+                                :class="getStatusBadgeClass(lead.leads_status.toLowerCase())"
                             >
                                 {{ getStatusLabel(lead.leads_status) }}
                             </span>
@@ -292,7 +292,7 @@
             </div>
 
             <!-- Refresh Button -->
-            <div v-if="leadsStore.leads.length > 0" class="mt-6 text-center">
+            <!-- <div v-if="leadsStore.leads.length > 0" class="mt-6 text-center">
                 <button 
                     @click="refreshLeads"
                     :disabled="leadsStore.isLoading"
@@ -301,7 +301,7 @@
                     <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': leadsStore.isLoading }" />
                     Refresh Data
                 </button>
-            </div>
+            </div> -->
         </div>
     </div>
 </template>
@@ -340,7 +340,15 @@ const statusFilters = [
 // Debounced search
 const { searchQuery, isSearching, clearSearch } = useDebouncedSearch(
     async (query: string) => {
-        await applyFilters({ search: query })
+        // Build filters untuk search
+        const filters: any = {}
+        
+        if (query) filters.search = query
+        if (activeFilter.value !== 'all') filters.status = activeFilter.value
+        if (favoriteFilter.value) filters.is_favorited = true
+        if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+        
+        applyFiltersWithObject(filters)
     },
     { delay: 500, minLength: 0 }
 )
@@ -382,19 +390,14 @@ const initializeFromQuery = () => {
     }
 }
 
-const buildFilters = () => {
-    const filters: any = {}
+const applyFilters = async (additionalFilters = {}) => {
+    // Build filters yang bersih
+    const filters: any = { ...additionalFilters }
     
     if (searchQuery.value) filters.search = searchQuery.value
     if (activeFilter.value !== 'all') filters.status = activeFilter.value
     if (favoriteFilter.value) filters.is_favorited = true
     if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
-    
-    return filters
-}
-
-const applyFilters = async (additionalFilters = {}) => {
-    const filters = { ...buildFilters(), ...additionalFilters }
 
     try {
         const result = await leadsStore.fetchLeads(filters, true)
@@ -406,7 +409,17 @@ const applyFilters = async (additionalFilters = {}) => {
     }
 }
 
-const fetchLeads = () => applyFilters()
+const fetchLeads = () => {
+    // Fetch dengan filter saat ini
+    const filters: any = {}
+    
+    if (searchQuery.value) filters.search = searchQuery.value
+    if (activeFilter.value !== 'all') filters.status = activeFilter.value
+    if (favoriteFilter.value) filters.is_favorited = true
+    if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    
+    applyFiltersWithObject(filters)
+}
 
 const loadMore = async () => {
     try {
@@ -422,7 +435,39 @@ const loadMore = async () => {
 const setStatusFilter = (status: string) => {
     activeFilter.value = status
     updateQueryParam(status)
-    applyFilters()
+    
+    // Buat filter yang benar-benar bersih
+    const filters: any = {}
+    
+    // Hanya tambahkan filter yang aktif
+    if (searchQuery.value) {
+        filters.search = searchQuery.value
+    }
+    if (status !== 'all') {
+        filters.status = status
+    }
+    // Jika status = 'all', maka parameter status tidak disertakan sama sekali
+    
+    if (favoriteFilter.value) {
+        filters.is_favorited = true
+    }
+    if (assignmentFilter.value) {
+        filters.assignment_type = assignmentFilter.value
+    }
+    
+    console.log('Status filter applied:', filters) // Debug log
+    applyFiltersWithObject(filters)
+}
+
+const applyFiltersWithObject = async (filters: any) => {
+    try {
+        const result = await leadsStore.fetchLeads(filters, true)
+        if (!result.success) {
+            toast.error('Gagal memuat data leads', 'Error')
+        }
+    } catch (error: any) {
+        toast.error('Gagal memuat data leads', 'Error')
+    }
 }
 
 const updateQueryParam = (filter: string) => {
@@ -432,7 +477,15 @@ const updateQueryParam = (filter: string) => {
 
 const toggleFavoriteFilter = () => {
     favoriteFilter.value = !favoriteFilter.value
-    applyFilters()
+    
+    // Rebuild filters
+    const filters: any = {}
+    if (searchQuery.value) filters.search = searchQuery.value
+    if (activeFilter.value !== 'all') filters.status = activeFilter.value
+    if (favoriteFilter.value) filters.is_favorited = true
+    if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    
+    applyFiltersWithObject(filters)
 }
 
 const toggleAssignmentFilter = () => {
@@ -443,16 +496,31 @@ const toggleAssignmentFilter = () => {
     } else {
         assignmentFilter.value = null
     }
-    applyFilters()
+    
+    // Rebuild filters
+    const filters: any = {}
+    if (searchQuery.value) filters.search = searchQuery.value
+    if (activeFilter.value !== 'all') filters.status = activeFilter.value
+    if (favoriteFilter.value) filters.is_favorited = true
+    if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    
+    applyFiltersWithObject(filters)
 }
 
 const clearAllFilters = () => {
+    console.log('Clearing all filters') // Debug log
+    
+    // Reset semua filter UI
     searchQuery.value = ''
     activeFilter.value = 'all'
     favoriteFilter.value = false
     assignmentFilter.value = null
+    
+    // Update query param
     updateQueryParam('all')
-    // applyFilters()
+    
+    // Kirim request dengan object kosong (tanpa parameter apapun)
+    applyFiltersWithObject({})
 }
 
 const getStatusCount = (status: string) => {

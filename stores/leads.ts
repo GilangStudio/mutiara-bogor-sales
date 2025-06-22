@@ -91,7 +91,7 @@ export const useLeadsStore = defineStore('leads', {
         pagination: {
             current_page: 1,
             last_page: 1,
-            per_page: 15,
+            per_page: 5,
             total: 0,
             has_more_pages: false
         },
@@ -152,29 +152,37 @@ export const useLeadsStore = defineStore('leads', {
             try {
                 const { $api }: any = useNuxtApp()
                 
-                // Merge dengan filter yang sudah ada jika tidak reset
-                const finalParams = {
-                    ...this.filters,
+                // Untuk reset (halaman baru), gunakan params yang diberikan langsung
+                // Untuk load more, gunakan filter yang tersimpan
+                const finalParams = reset ? {
                     ...params,
-                    page: reset ? 1 : this.pagination.current_page + 1,
+                    page: 1,
+                    per_page: this.pagination.per_page
+                } : {
+                    ...this.filters,
+                    page: this.pagination.current_page + 1,
                     per_page: this.pagination.per_page
                 }
 
-                // Bersihkan parameter yang undefined
-                Object.keys(finalParams).forEach(key => {
-                    if (finalParams[key] === undefined || finalParams[key] === '') {
-                        delete finalParams[key]
+                // Bersihkan parameter yang undefined atau empty string
+                const cleanParams = Object.keys(finalParams).reduce((acc, key) => {
+                    const value = finalParams[key]
+                    if (value !== undefined && value !== '' && value !== null) {
+                        acc[key] = value
                     }
-                })
+                    return acc
+                }, {} as any)
+
+                console.log('API Request params:', cleanParams) // Debug log
 
                 const response = await $api('/get_leads', {
                     method: 'GET',
-                    query: finalParams
+                    query: cleanParams
                 })
 
                 if (response.status === 'success' && response.data) {
                     if (reset) {
-                        this.setLeadsData(response.data, finalParams)
+                        this.setLeadsData(response.data, params)
                     } else {
                         this.appendLeadsData(response.data)
                     }
@@ -199,52 +207,117 @@ export const useLeadsStore = defineStore('leads', {
         },
 
         async searchLeads(searchQuery: string) {
-            this.filters.search = searchQuery
-            return await this.fetchLeads({ search: searchQuery }, true)
+            const params = { ...this.filters, search: searchQuery }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
         },
 
         async filterByStatus(status?: 'new' | 'process' | 'closing') {
-            this.filters.status = status
-            return await this.fetchLeads({ status }, true)
+            const params = { ...this.filters }
+            if (status) {
+                params.status = status
+            } else {
+                delete params.status // Hapus status jika undefined
+            }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
         },
 
         async filterByPlatform(platformId?: number) {
-            this.filters.platform_id = platformId
-            return await this.fetchLeads({ platform_id: platformId }, true)
+            const params = { ...this.filters }
+            if (platformId) {
+                params.platform_id = platformId
+            } else {
+                delete params.platform_id
+            }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
         },
 
         async filterByAssignmentType(assignmentType?: 'auto' | 'manual') {
-            this.filters.assignment_type = assignmentType
-            return await this.fetchLeads({ assignment_type: assignmentType }, true)
+            const params = { ...this.filters }
+            if (assignmentType) {
+                params.assignment_type = assignmentType
+            } else {
+                delete params.assignment_type
+            }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
         },
 
         async filterByFavorite(isFavorited?: boolean) {
-            this.filters.is_favorited = isFavorited
-            return await this.fetchLeads({ is_favorited: isFavorited }, true)
+            const params = { ...this.filters }
+            if (isFavorited) {
+                params.is_favorited = isFavorited
+            } else {
+                delete params.is_favorited
+            }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
         },
 
         async filterByDateRange(dateFrom?: string, dateTo?: string) {
-            this.filters.date_from = dateFrom
-            this.filters.date_to = dateTo
-            return await this.fetchLeads({ date_from: dateFrom, date_to: dateTo }, true)
+            const params = { ...this.filters }
+            if (dateFrom) {
+                params.date_from = dateFrom
+            } else {
+                delete params.date_from
+            }
+            if (dateTo) {
+                params.date_to = dateTo
+            } else {
+                delete params.date_to
+            }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
         },
 
         async applyFilters(filters: FilterParams) {
-            this.filters = { ...this.filters, ...filters }
-            return await this.fetchLeads(filters, true)
+            // Bersihkan undefined values
+            const cleanFilters = Object.keys(filters).reduce((acc, key) => {
+                const value = filters[key]
+                if (value !== undefined && value !== '' && value !== null) {
+                    acc[key] = value
+                }
+                return acc
+            }, {} as any)
+            
+            return await this.fetchLeads(cleanFilters, true)
         },
 
         async clearFilters() {
-            this.filters = {
-                search: '',
-                status: undefined,
-                platform_id: undefined,
-                assignment_type: undefined,
-                is_favorited: undefined,
-                date_from: undefined,
-                date_to: undefined
-            }
-            return await this.fetchLeads({}, true)
+            const emptyFilters = {}
+            return await this.fetchLeads(emptyFilters, true)
         },
 
         async toggleFavorite(leadId: number) {
@@ -353,7 +426,18 @@ export const useLeadsStore = defineStore('leads', {
                 has_more_pages: data.summary.has_more_pages
             }
             this.summary = data.summary
-            this.filters = { ...this.filters, ...appliedFilters }
+            
+            // Update filters dengan yang benar-benar diapply, hapus yang undefined
+            this.filters = {
+                search: appliedFilters.search || '',
+                status: appliedFilters.status,
+                platform_id: appliedFilters.platform_id,
+                assignment_type: appliedFilters.assignment_type,
+                is_favorited: appliedFilters.is_favorited,
+                date_from: appliedFilters.date_from,
+                date_to: appliedFilters.date_to
+            }
+            
             this.lastFetch = new Date()
             this.error = null
         },
