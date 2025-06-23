@@ -414,7 +414,7 @@ const showEditDialog = () => {
 }
 
 const showStatusDialog = () => {
-    toast.comingSoon('Ubah Status Lead')
+    navigateTo(`/leads/${leadId.value}/change-status`)
 }
 
 const openWhatsApp = () => {
