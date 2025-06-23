@@ -1,6 +1,7 @@
 import { useToastStore } from "~/stores/toast"
 import { useLeadsStore } from "~/stores/leads"
 import { useChangeStatusStore } from "~/stores/change-status"
+import { useUpdateLeadStore } from "~/stores/update-lead"
 
 // plugins/stores.client.ts
 export default defineNuxtPlugin(() => {
@@ -19,13 +20,17 @@ export default defineNuxtPlugin(() => {
         // Initialize change status store
         const changeStatusStore = useChangeStatusStore()
 
+        // Initialize update lead store
+        const updateLeadStore = useUpdateLeadStore()
+
         // Make stores globally available
         return {
             provide: {
                 authStore,
                 toastStore,
                 leadsStore,
-                changeStatusStore
+                changeStatusStore,
+                updateLeadStore
             }
         }
     }

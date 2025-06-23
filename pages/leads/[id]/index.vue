@@ -410,7 +410,7 @@ const toggleFavorite = async () => {
 }
 
 const showEditDialog = () => {
-    toast.comingSoon('Edit Lead')
+    navigateTo(`/leads/${leadId.value}/edit`)
 }
 
 const showStatusDialog = () => {
