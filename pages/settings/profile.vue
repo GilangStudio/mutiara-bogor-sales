@@ -48,14 +48,22 @@
                             required />
                     </div>
 
-                    <!-- Phone Input (Read Only) -->
+                    <!-- Phone Input -->
                     <div class="space-y-2">
                         <label for="phone" class="text-sm font-medium text-foreground">
                             Nomor Telepon
                         </label>
-                        <input id="phone" :value="authStore.user?.phone" type="tel" readonly
-                            class="w-full px-3 py-3 bg-muted border border-border rounded-lg cursor-not-allowed opacity-60" />
-                        <p class="text-xs text-muted-foreground">Nomor telepon tidak dapat diubah</p>
+                        <div class="relative">
+                            <Phone class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <input 
+                                id="phone" 
+                                v-model="profileForm.phone" 
+                                type="tel" 
+                                placeholder="08123456789"
+                                class="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                required 
+                            />
+                        </div>
                     </div>
 
                     <!-- Email Input -->
@@ -63,8 +71,16 @@
                         <label for="email" class="text-sm font-medium text-foreground">
                             Email
                         </label>
-                        <input id="email" v-model="profileForm.email" type="email" placeholder="Masukkan email"
-                            class="w-full px-3 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                        <div class="relative">
+                            <Mail class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <input 
+                                id="email" 
+                                v-model="profileForm.email" 
+                                type="email" 
+                                placeholder="Masukkan email"
+                                class="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" 
+                            />
+                        </div>
                     </div>
 
                     <!-- Save Button -->
@@ -78,51 +94,23 @@
 
             <!-- Security Settings -->
             <div class="space-y-3">
-                <h3 class="text-lg font-semibold text-foreground">Keamanan & Privasi</h3>
+                <h3 class="text-lg font-semibold text-foreground">Keamanan</h3>
 
                 <NuxtLink to="/settings/update-password" class="block">
-                        <div
-                            class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                                    <Key class="h-5 w-5 text-red-600 dark:text-red-400" />
-                                </div>
-                                <div>
-                                    <div class="font-medium">Ubah Password</div>
-                                    <div class="text-sm text-muted-foreground">Perbarui password akun</div>
-                                </div>
+                    <div
+                        class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                <Key class="h-5 w-5 text-red-600 dark:text-red-400" />
                             </div>
-                            <ChevronRight class="h-4 w-4 text-muted-foreground" />
+                            <div>
+                                <div class="font-medium">Ubah Password</div>
+                                <div class="text-sm text-muted-foreground">Perbarui password akun</div>
+                            </div>
                         </div>
-                    </NuxtLink>
-
-                <div
-                    class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Shield class="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <div class="font-medium">Keamanan Akun</div>
-                            <div class="text-sm text-muted-foreground">Two-factor authentication</div>
-                        </div>
+                        <ChevronRight class="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ChevronRight class="h-4 w-4 text-muted-foreground" />
-                </div>
-
-                <div
-                    class="bg-card border border-border rounded-lg p-4 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Database class="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                            <div class="font-medium">Data & Privasi</div>
-                            <div class="text-sm text-muted-foreground">Kelola data pribadi</div>
-                        </div>
-                    </div>
-                    <ChevronRight class="h-4 w-4 text-muted-foreground" />
-                </div>
+                </NuxtLink>
             </div>
 
             <!-- Activity Log -->
@@ -148,7 +136,7 @@
                         </div>
                         <div class="flex-1">
                             <div class="text-sm font-medium">Profil diperbarui</div>
-                            <div class="text-xs text-muted-foreground">1 minggu yang lalu</div>
+                            <div class="text-xs text-muted-foreground">{{ lastUpdated }}</div>
                         </div>
                     </div>
                 </div>
@@ -161,6 +149,8 @@
 import {
     ArrowLeft,
     User,
+    Phone,
+    Mail,
     Key,
     Shield,
     Database,
@@ -178,28 +168,33 @@ definePageMeta({
 
 // Stores
 const authStore = useAuthStore()
+const toast = useToast()
 
 // Form data
 const profileForm = reactive({
     name: '',
+    phone: '',
     email: ''
 })
 
 const isSaving = ref(false)
+const lastUpdated = ref('1 minggu yang lalu')
 
 // Initialize form with user data
 onMounted(() => {
     if (authStore.user) {
-        profileForm.name = authStore.user.name
-        profileForm.email = authStore.user.email
+        profileForm.name = authStore.user.name || ''
+        profileForm.phone = authStore.user.phone || ''
+        profileForm.email = authStore.user.email || ''
     }
 })
 
 // Watch for user data changes
 watch(() => authStore.user, (newUser) => {
     if (newUser) {
-        profileForm.name = newUser.name
-        profileForm.email = newUser.email
+        profileForm.name = newUser.name || ''
+        profileForm.phone = newUser.phone || ''
+        profileForm.email = newUser.email || ''
     }
 })
 
@@ -208,41 +203,69 @@ const handleSaveProfile = async () => {
     isSaving.value = true
 
     try {
-        // TODO: Implement API call to update profile
-        // const config = useRuntimeConfig()
-        // const { $fetch } = useNuxtApp()
-        // 
-        // await $fetch(`${config.public.apiBase}/profile`, {
-        //   method: 'PUT',
-        //   headers: {
-        //     'Authorization': `Bearer ${authStore.token}`
-        //   },
-        //   body: {
-        //     name: profileForm.name,
-        //     email: profileForm.email
-        //   }
-        // })
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Update user data in store
-        if (authStore.user) {
-            authStore.user.name = profileForm.name
-            authStore.user.email = profileForm.email
-
-            // Update localStorage
-            if (process.client) {
-                localStorage.setItem('user_data', JSON.stringify(authStore.user))
-            }
+        const { $api }: any = useNuxtApp()
+        
+        // Prepare payload
+        const payload = {
+            name: profileForm.name.trim(),
+            phone: profileForm.phone.trim(),
+            email: profileForm.email.trim() || null
         }
 
-        // Show success message (you can implement toast notification here)
-        console.log('Profil berhasil diperbarui')
+        // API call to update profile
+        const response = await $api('/user/update', {
+            method: 'POST',
+            body: payload
+        })
 
-    } catch (error) {
+        if (response.status === 'success') {
+            // Update user data in store
+            if (authStore.user) {
+                authStore.user.name = payload.name
+                authStore.user.phone = payload.phone
+                authStore.user.email = payload.email
+
+                // Update localStorage
+                if (process.client) {
+                    localStorage.setItem('user_data', JSON.stringify(authStore.user))
+                }
+            }
+
+            // Update last updated time
+            lastUpdated.value = 'Baru saja'
+
+            // Show success message
+            toast.success('Profil berhasil diperbarui', 'Berhasil')
+
+        } else {
+            throw new Error(response.message || 'Gagal memperbarui profil')
+        }
+
+    } catch (error: any) {
         console.error('Error updating profile:', error)
-        // Show error message
+        
+        let errorMessage = 'Gagal memperbarui profil'
+        
+        if (error.status === 401) {
+            errorMessage = 'Sesi Anda telah berakhir, silakan login kembali'
+        } else if (error.status === 422) {
+            // Validation error dari backend
+            if (error.data?.data?.errors) {
+                const errors = error.data.data.errors
+                // Tampilkan error pertama
+                const firstError = Object.values(errors)[0]
+                errorMessage = Array.isArray(firstError) ? firstError[0] : firstError as string
+            } else {
+                errorMessage = error.data?.message || 'Data tidak valid'
+            }
+        } else if (error.data?.message) {
+            errorMessage = error.data.message
+        } else if (error.message) {
+            errorMessage = error.message
+        }
+
+        toast.error(errorMessage, 'Error')
+        
     } finally {
         isSaving.value = false
     }

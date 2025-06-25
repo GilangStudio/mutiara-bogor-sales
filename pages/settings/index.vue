@@ -1,5 +1,6 @@
 <template>
-    <div class="min-h-screen p-4">
+    <!-- <div class="min-h-screen p-4"> -->
+    <div class="p-4" style="min-height: calc(100vh - 100px);">
         <div class="max-w-md mx-auto">
             <!-- Header -->
             <div class="mb-6">
@@ -87,7 +88,7 @@
                 </div>
 
                 <!-- App Preferences Section -->
-                <div class="bg-card border border-border rounded-lg p-4">
+                <!-- <div class="bg-card border border-border rounded-lg p-4">
                     <h3 class="font-semibold mb-3 flex items-center gap-2">
                         <Settings class="h-4 w-4 text-primary" />
                         Preferensi Aplikasi
@@ -129,10 +130,10 @@
                             </button>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Support & About Section -->
-                <div class="bg-card border border-border rounded-lg p-4">
+                <!-- <div class="bg-card border border-border rounded-lg p-4">
                     <h3 class="font-semibold mb-3 flex items-center gap-2">
                         <HelpCircle class="h-4 w-4 text-primary" />
                         Bantuan & Informasi
@@ -177,10 +178,10 @@
                             <ExternalLink class="h-4 w-4 text-muted-foreground" />
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Danger Zone -->
-                <div class="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+                <!-- <div class="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
                     <h3 class="font-semibold mb-4 flex items-center gap-2 text-destructive">
                         <AlertTriangle class="h-4 w-4" />
                         Zona Berbahaya
@@ -192,9 +193,15 @@
                             Keluar dari Akun
                         </button>
                     </div>
-                </div>
+                </div> -->
 
+                <button @click="handleLogout"
+                    class="w-full py-3 bg-destructive text-destructive-foreground rounded-lg font-medium hover:bg-destructive/90 transition-colors flex items-center justify-center gap-2">
+                    <LogOut class="h-4 w-4" />
+                    Keluar dari Akun
+                </button>
             </div>
+
         </div>
     </div>
 </template>

@@ -137,6 +137,8 @@ export const useStatisticsStore = defineStore('statistics', {
         getRecentActivities: (state) => state.statistics?.recent_activities || [],
         getGoals: (state) => state.statistics?.goals,
         getSalesInfo: (state) => state.statistics?.sales_info,
+        getPeriodInfo: (state) => state.statistics?.period_info,
+        getAssignmentStats: (state) => state.statistics?.assignment_stats,
         
         // Helper getters
         hasData: (state) => !!state.statistics,
@@ -280,7 +282,7 @@ export const useStatisticsStore = defineStore('statistics', {
                 'process': 'text-yellow-600 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-900/30',
                 'closing': 'text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-900/30'
             }
-            return colors[status] || 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-900/30'
+            return colors[status?.toLowerCase()] || 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-900/30'
         },
 
         getStatusText(status: string): string {
@@ -289,16 +291,16 @@ export const useStatisticsStore = defineStore('statistics', {
                 'process': 'Proses',
                 'closing': 'Closing'
             }
-            return texts[status] || status
+            return texts[status?.toLowerCase()] || status
         },
 
         getStatusBarColor(status: string): string {
             const colors: Record<string, string> = {
-                'new': 'primary',
-                'process': 'warning',
-                'closing': 'success'
+                'new': 'bg-blue-500',
+                'process': 'bg-yellow-500',
+                'closing': 'bg-green-500'
             }
-            return colors[status] || 'secondary'
+            return colors[status?.toLowerCase()] || 'bg-gray-500'
         },
 
         getChangeDirection(percentage: number): 'up' | 'down' | 'same' {
@@ -340,6 +342,52 @@ export const useStatisticsStore = defineStore('statistics', {
                 'behind': 'Di Bawah Target'
             }
             return texts[status] || 'Unknown'
+        },
+
+        formatNumber(num: number): string {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M'
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K'
+            }
+            return Math.round(num).toString()
+        },
+
+        formatDays(days: number): string {
+            return Math.round(days).toString()
+        },
+
+        calculateDaysBetween(dateFrom: string, dateTo: string): number {
+            try {
+                const startDate = new Date(dateFrom)
+                const endDate = new Date(dateTo)
+                
+                // Reset waktu ke 00:00:00 untuk perhitungan yang akurat
+                startDate.setHours(0, 0, 0, 0)
+                endDate.setHours(0, 0, 0, 0)
+                
+                // Hitung selisih dalam milliseconds lalu convert ke hari
+                const diffTime = endDate.getTime() - startDate.getTime()
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+                
+                // Tambah 1 karena inclusive (termasuk hari pertama dan terakhir)
+                // Contoh: 1 Juni - 30 Juni = 29 hari selisih + 1 = 30 hari total
+                return Math.max(1, diffDays + 1)
+            } catch {
+                return Math.round(days)
+            }
+        },
+
+        getPerformanceLevel(score: number): { level: string; color: string } {
+            if (score >= 80) {
+                return { level: 'Excellent', color: 'text-green-600' }
+            } else if (score >= 60) {
+                return { level: 'Good', color: 'text-blue-600' }
+            } else if (score >= 40) {
+                return { level: 'Fair', color: 'text-yellow-600' }
+            } else {
+                return { level: 'Poor', color: 'text-red-600' }
+            }
         }
     }
 })

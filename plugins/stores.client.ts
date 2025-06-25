@@ -2,6 +2,7 @@ import { useToastStore } from "~/stores/toast"
 import { useLeadsStore } from "~/stores/leads"
 import { useChangeStatusStore } from "~/stores/change-status"
 import { useUpdateLeadStore } from "~/stores/update-lead"
+import { useStatisticsStore } from "~/stores/statistics"
 
 // plugins/stores.client.ts
 export default defineNuxtPlugin(() => {
@@ -23,6 +24,9 @@ export default defineNuxtPlugin(() => {
         // Initialize update lead store
         const updateLeadStore = useUpdateLeadStore()
 
+        // Initialize statistics store
+        const statisticsStore = useStatisticsStore()
+
         // Make stores globally available
         return {
             provide: {
@@ -30,7 +34,8 @@ export default defineNuxtPlugin(() => {
                 toastStore,
                 leadsStore,
                 changeStatusStore,
-                updateLeadStore
+                updateLeadStore,
+                statisticsStore
             }
         }
     }
