@@ -1,5 +1,6 @@
 <template>
     <div>
+        <VitePwaManifest />
         <!-- Tampilkan loading saat hydrating untuk mencegah mismatch -->
         <div v-if="!hydrated" class="mobile-container">
             <div class="min-h-screen flex items-center justify-center">
@@ -16,10 +17,16 @@
 
         <!-- Toast Container - Always rendered -->
         <ToastContainer />
+
+        <PWAInstallButton />
+        <!-- <NotificationGuard /> -->
     </div>
 </template>
 
 <script setup>
+import PWAInstallButton from '~/components/PWAInstallButton.vue'
+import NotificationGuard from '~/components/NotificationGuard.vue'
+
 // Meta tags untuk mobile
 useHead({
     title: 'CRM Sales App',

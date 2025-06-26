@@ -4,6 +4,16 @@ export interface Platform {
     platform_name: string
 }
 
+export interface RecontactInfo {
+    is_recontact: boolean
+    recontact_count: number
+    is_recent_recontact: boolean
+    last_contact_at: string | null
+    last_contact_formatted: string | null
+    last_contact_diff: string | null
+    recontact_label: string
+}
+
 export interface Lead {
     id: number
     name: string
@@ -16,6 +26,7 @@ export interface Lead {
     platform: Platform
     is_favorited: boolean
     assignment_type: 'auto' | 'manual'
+    recontact_info: RecontactInfo
     date: string
     created_at: string
     formatted_phone: string
@@ -26,6 +37,12 @@ export interface LeadsStatusCount {
     new: number
     process: number
     closing: number
+}
+
+export interface RecontactStats {
+    total_with_recontact: number
+    total_without_recontact: number
+    recent_recontacts: number
 }
 
 export interface PaginationMeta {
@@ -47,12 +64,14 @@ export interface LeadsResponse {
         data: Lead[]
     }
     total_leads_status: LeadsStatusCount
+    recontact_stats: RecontactStats
     filters_applied: {
         search?: string
         status?: string
         platform_id?: number
         assignment_type?: string
         is_favorited?: boolean
+        has_recontact?: boolean
         date_from?: string
         date_to?: string
     }
@@ -60,6 +79,7 @@ export interface LeadsResponse {
         total_filtered: number
         current_page_count: number
         has_more_pages: boolean
+        priority_info: string
     }
 }
 
@@ -69,6 +89,7 @@ export interface FilterParams {
     platform_id?: number
     assignment_type?: 'auto' | 'manual'
     is_favorited?: boolean
+    has_recontact?: boolean
     date_from?: string
     date_to?: string
     page?: number
@@ -88,6 +109,11 @@ export const useLeadsStore = defineStore('leads', {
             process: 0,
             closing: 0
         } as LeadsStatusCount,
+        recontactStats: {
+            total_with_recontact: 0,
+            total_without_recontact: 0,
+            recent_recontacts: 0
+        } as RecontactStats,
         pagination: {
             current_page: 1,
             last_page: 1,
@@ -101,6 +127,7 @@ export const useLeadsStore = defineStore('leads', {
             platform_id: undefined,
             assignment_type: undefined,
             is_favorited: undefined,
+            has_recontact: undefined,
             date_from: undefined,
             date_to: undefined
         } as FilterParams,
@@ -111,7 +138,8 @@ export const useLeadsStore = defineStore('leads', {
         summary: {
             total_filtered: 0,
             current_page_count: 0,
-            has_more_pages: false
+            has_more_pages: false,
+            priority_info: ''
         }
     }),
 
@@ -126,6 +154,18 @@ export const useLeadsStore = defineStore('leads', {
 
         getFavoriteLeads: (state) => {
             return state.leads.filter(lead => lead.is_favorited)
+        },
+
+        getRecontactLeads: (state) => {
+            return state.leads.filter(lead => lead.recontact_info.is_recontact)
+        },
+
+        getRecentRecontactLeads: (state) => {
+            return state.leads.filter(lead => lead.recontact_info.is_recent_recontact)
+        },
+
+        getNonRecontactLeads: (state) => {
+            return state.leads.filter(lead => !lead.recontact_info.is_recontact)
         },
 
         hasNextPage: (state) => {
@@ -281,6 +321,22 @@ export const useLeadsStore = defineStore('leads', {
             return await this.fetchLeads(params, true)
         },
 
+        async filterByRecontact(hasRecontact?: boolean) {
+            const params = { ...this.filters }
+            if (hasRecontact !== undefined) {
+                params.has_recontact = hasRecontact
+            } else {
+                delete params.has_recontact
+            }
+            // Bersihkan undefined values
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === '') {
+                    delete params[key]
+                }
+            })
+            return await this.fetchLeads(params, true)
+        },
+
         async filterByDateRange(dateFrom?: string, dateTo?: string) {
             const params = { ...this.filters }
             if (dateFrom) {
@@ -418,6 +474,7 @@ export const useLeadsStore = defineStore('leads', {
         setLeadsData(data: LeadsResponse, appliedFilters: FilterParams) {
             this.leads = data.leads.data
             this.totalLeadsStatus = data.total_leads_status
+            this.recontactStats = data.recontact_stats
             this.pagination = {
                 current_page: data.leads.current_page,
                 last_page: data.leads.last_page,
@@ -434,6 +491,7 @@ export const useLeadsStore = defineStore('leads', {
                 platform_id: appliedFilters.platform_id,
                 assignment_type: appliedFilters.assignment_type,
                 is_favorited: appliedFilters.is_favorited,
+                has_recontact: appliedFilters.has_recontact,
                 date_from: appliedFilters.date_from,
                 date_to: appliedFilters.date_to
             }
@@ -457,6 +515,7 @@ export const useLeadsStore = defineStore('leads', {
                 has_more_pages: data.summary.has_more_pages
             }
             this.summary = data.summary
+            this.recontactStats = data.recontact_stats
         },
 
         updateStatusCounts(fromStatus: 'new' | 'process' | 'closing', toStatus: 'new' | 'process' | 'closing') {
@@ -474,6 +533,11 @@ export const useLeadsStore = defineStore('leads', {
         clearLeads() {
             this.leads = []
             this.totalLeadsStatus = { new: 0, process: 0, closing: 0 }
+            this.recontactStats = { 
+                total_with_recontact: 0, 
+                total_without_recontact: 0, 
+                recent_recontacts: 0 
+            }
             this.pagination = {
                 current_page: 1,
                 last_page: 1,
@@ -484,7 +548,8 @@ export const useLeadsStore = defineStore('leads', {
             this.summary = {
                 total_filtered: 0,
                 current_page_count: 0,
-                has_more_pages: false
+                has_more_pages: false,
+                priority_info: ''
             }
             this.filters = {
                 search: '',
@@ -492,6 +557,7 @@ export const useLeadsStore = defineStore('leads', {
                 platform_id: undefined,
                 assignment_type: undefined,
                 is_favorited: undefined,
+                has_recontact: undefined,
                 date_from: undefined,
                 date_to: undefined
             }

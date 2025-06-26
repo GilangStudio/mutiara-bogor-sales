@@ -1,3 +1,14 @@
+// stores/lead-detail.ts
+export interface RecontactInfo {
+    is_recontact: boolean
+    recontact_count: number
+    is_recent_recontact: boolean
+    last_contact_at: string | null
+    last_contact_formatted: string | null
+    last_contact_diff: string | null
+    recontact_label: string
+}
+
 export interface LeadDetail {
     id: number
     name: string
@@ -23,6 +34,7 @@ export interface LeadDetail {
         }
     }
     is_favorited: boolean
+    recontact_info: RecontactInfo
     contact_info: {
         formatted_phone: string
         whatsapp_url: string
@@ -63,9 +75,16 @@ export interface MovementHistory {
 }
 
 export interface TimelineEvent {
+    type: string
     title: string
-    time: string
     description?: string
+    assignment_type?: string
+    from_sales?: string
+    to_sales?: string
+    date: string
+    date_diff: string
+    icon: string
+    color: string
 }
 
 export interface LeadDetailResponse {

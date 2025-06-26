@@ -88,6 +88,46 @@
                     </div>
                 </div>
 
+                <!-- Recontact Information -->
+                <div v-if="leadDetail.recontact_info?.is_recontact" class="bg-card border border-border rounded-lg p-4">
+                    <h3 class="font-semibold mb-3 flex items-center gap-2">
+                        <RotateCcw class="h-4 w-4 text-primary" />
+                        Informasi Recontact
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <div class="text-lg font-bold text-orange-800 dark:text-orange-200">
+                                    {{ leadDetail.recontact_info.recontact_count }}x
+                                </div>
+                                <div class="text-xs text-orange-600 dark:text-orange-400">Total Recontact</div>
+                            </div>
+                            <div class="text-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <div class="text-lg font-bold text-purple-800 dark:text-purple-200">
+                                    {{ leadDetail.recontact_info.is_recent_recontact ? 'Ya' : 'Tidak' }}
+                                </div>
+                                <div class="text-xs text-purple-600 dark:text-purple-400">Recontact Baru</div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="leadDetail.recontact_info.last_contact_at" class="bg-muted/30 rounded-lg p-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                    <Clock class="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-foreground">
+                                        Kontak Terakhir: {{ leadDetail.recontact_info.last_contact_formatted }}
+                                    </div>
+                                    <div class="text-xs text-muted-foreground">
+                                        {{ leadDetail.recontact_info.last_contact_diff }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Contact Information -->
                 <div class="bg-card border border-border rounded-lg p-4">
                     <h3 class="font-semibold mb-3 flex items-center gap-2">
@@ -205,7 +245,7 @@
                         Pesan Customer
                     </h3>
                     <div class="bg-muted/30 rounded-lg p-3 border border-muted">
-                        <p class="text-sm text-foreground leading-relaxed">{{ leadDetail.message }}</p>
+                        <p class="text-sm text-foreground leading-relaxed whitespace-pre-line">{{ leadDetail.message }}</p>
                     </div>
                 </div>
 
@@ -216,7 +256,7 @@
                         Catatan Sales
                     </h3>
                     <div class="bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800">
-                        <p class="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">{{ leadDetail.note }}</p>
+                        <p class="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed whitespace-pre-line">{{ leadDetail.note }}</p>
                     </div>
                 </div>
 
@@ -303,7 +343,7 @@
 import {
     ArrowLeft, Star, AlertCircle, Edit, RefreshCw, Phone, Mail, MessageCircle,
     ExternalLink, Globe, Link, UserCheck, User, Calendar, MessageSquare,
-    NotepadText, History, ArrowRight, Clock, Info, Zap
+    NotepadText, History, ArrowRight, Clock, Info, Zap, RotateCcw
 } from 'lucide-vue-next'
 
 // Middleware untuk proteksi halaman

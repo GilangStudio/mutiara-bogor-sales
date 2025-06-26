@@ -65,6 +65,16 @@
                         {{ getAssignmentFilterLabel() }}
                     </button>
 
+                    <!-- Recontact Filter -->
+                    <button 
+                        @click="toggleRecontactFilter"
+                        class="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg transition-colors"
+                        :class="recontactFilter ? 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-800 dark:text-orange-200' : 'hover:bg-accent'"
+                    >
+                        <RotateCcw class="h-4 w-4" />
+                        {{ getRecontactFilterLabel() }}
+                    </button>
+
                     <button 
                         v-if="hasActiveFilters"
                         @click="clearAllFilters"
@@ -88,7 +98,7 @@
                     <div class="grid grid-cols-4 gap-3">
                         <div class="text-center">
                             <div class="text-lg font-bold text-foreground">{{ leadsStore.summary.total_filtered }}</div>
-                            <div class="text-xs text-muted-foreground">Filtered</div>
+                            <div class="text-xs text-muted-foreground">Total</div>
                         </div>
                         <div class="text-center">
                             <div class="text-lg font-bold text-blue-600">{{ leadsStore.totalLeadsStatus?.new || 0 }}</div>
@@ -101,6 +111,24 @@
                         <div class="text-center">
                             <div class="text-lg font-bold text-green-600">{{ leadsStore.totalLeadsStatus?.closing || 0 }}</div>
                             <div class="text-xs text-muted-foreground">Closing</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recontact Stats - Simple Row -->
+                    <div v-if="leadsStore.recontactStats" class="border-t border-border pt-3 mt-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2">
+                                <RotateCcw class="h-4 w-4 text-orange-600" />
+                                <span class="text-muted-foreground">Recontact</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-orange-600 font-medium">
+                                    {{ leadsStore.recontactStats.total_with_recontact || 0 }}
+                                </span>
+                                <span class="text-xs text-muted-foreground">
+                                    dari {{ leadsStore.summary.total_filtered }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -164,18 +192,31 @@
                                 >
                                     <Star class="h-4 w-4" :class="lead.is_favorited ? 'fill-current' : ''" />
                                 </button>
-                                <!-- Assignment Type Badge -->
-                                <span 
-                                    v-if="lead.assignment_type"
-                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
-                                    :class="lead.assignment_type === 'auto' 
-                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'"
-                                >
-                                    <Zap v-if="lead.assignment_type === 'auto'" class="h-2.5 w-2.5 mr-1" />
-                                    <User v-else class="h-2.5 w-2.5 mr-1" />
-                                    {{ lead.assignment_type === 'auto' ? 'Auto' : 'Manual' }}
-                                </span>
+                                
+                                <!-- Assignment Type dengan Recontact -->
+                                <div class="flex items-center gap-1">
+                                    <!-- Assignment Type Badge -->
+                                    <span 
+                                        v-if="lead.assignment_type"
+                                        class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
+                                        :class="lead.assignment_type === 'auto' 
+                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'"
+                                    >
+                                        <Zap v-if="lead.assignment_type === 'auto'" class="h-2.5 w-2.5 mr-1" />
+                                        <User v-else class="h-2.5 w-2.5 mr-1" />
+                                        {{ lead.assignment_type === 'auto' ? 'Auto' : 'Manual' }}
+                                    </span>
+                                    
+                                    <!-- Recontact Icon + Count -->
+                                    <div v-if="lead.recontact_info?.is_recontact" 
+                                         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
+                                         :class="{ 'animate-pulse': lead.recontact_info.is_recent_recontact }"
+                                    >
+                                        <RotateCcw class="h-2.5 w-2.5" />
+                                        <span>{{ lead.recontact_info.recontact_count }}</span>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Contact Info -->
@@ -290,18 +331,6 @@
             <div v-else-if="leadsStore.leads.length > 0 && !leadsStore.canLoadMore" class="text-center py-4">
                 <p class="text-sm text-muted-foreground">Semua leads telah dimuat</p>
             </div>
-
-            <!-- Refresh Button -->
-            <!-- <div v-if="leadsStore.leads.length > 0" class="mt-6 text-center">
-                <button 
-                    @click="refreshLeads"
-                    :disabled="leadsStore.isLoading"
-                    class="flex items-center gap-2 px-4 py-2 text-sm bg-muted text-muted-foreground hover:bg-accent hover:text-foreground rounded-lg transition-colors disabled:opacity-50 mx-auto"
-                >
-                    <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': leadsStore.isLoading }" />
-                    Refresh Data
-                </button>
-            </div> -->
         </div>
     </div>
 </template>
@@ -310,7 +339,7 @@
 import { 
     Search, Star, FilterX, Zap, X, RefreshCw, Users, AlertCircle,
     User, Phone, Mail, Globe, Link, MessageCircle, MessageSquare, 
-    NotepadText, ChevronDown
+    NotepadText, ChevronDown, RotateCcw
 } from 'lucide-vue-next'
 
 // Middleware untuk proteksi halaman
@@ -327,6 +356,7 @@ const toast = useToast()
 const activeFilter = ref('all')
 const favoriteFilter = ref(false)
 const assignmentFilter = ref<'auto' | 'manual' | null>(null)
+const recontactFilter = ref<boolean | null>(null) // null = all, true = recontact, false = no recontact
 const expandedItems = ref<Record<string, boolean>>({})
 
 // Status filter options
@@ -347,6 +377,7 @@ const { searchQuery, isSearching, clearSearch } = useDebouncedSearch(
         if (activeFilter.value !== 'all') filters.status = activeFilter.value
         if (favoriteFilter.value) filters.is_favorited = true
         if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+        if (recontactFilter.value !== null) filters.has_recontact = recontactFilter.value
         
         applyFiltersWithObject(filters)
     },
@@ -378,7 +409,8 @@ const hasActiveFilters = computed(() => {
         searchQuery.value || 
         activeFilter.value !== 'all' || 
         favoriteFilter.value || 
-        assignmentFilter.value
+        assignmentFilter.value ||
+        recontactFilter.value !== null
     )
 })
 
@@ -390,25 +422,6 @@ const initializeFromQuery = () => {
     }
 }
 
-const applyFilters = async (additionalFilters = {}) => {
-    // Build filters yang bersih
-    const filters: any = { ...additionalFilters }
-    
-    if (searchQuery.value) filters.search = searchQuery.value
-    if (activeFilter.value !== 'all') filters.status = activeFilter.value
-    if (favoriteFilter.value) filters.is_favorited = true
-    if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
-
-    try {
-        const result = await leadsStore.fetchLeads(filters, true)
-        if (!result.success) {
-            toast.error('Gagal memuat data leads', 'Error')
-        }
-    } catch (error: any) {
-        toast.error('Gagal memuat data leads', 'Error')
-    }
-}
-
 const fetchLeads = () => {
     // Fetch dengan filter saat ini
     const filters: any = {}
@@ -417,6 +430,7 @@ const fetchLeads = () => {
     if (activeFilter.value !== 'all') filters.status = activeFilter.value
     if (favoriteFilter.value) filters.is_favorited = true
     if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    if (recontactFilter.value !== null) filters.has_recontact = recontactFilter.value
     
     applyFiltersWithObject(filters)
 }
@@ -446,7 +460,6 @@ const setStatusFilter = (status: string) => {
     if (status !== 'all') {
         filters.status = status
     }
-    // Jika status = 'all', maka parameter status tidak disertakan sama sekali
     
     if (favoriteFilter.value) {
         filters.is_favorited = true
@@ -454,8 +467,10 @@ const setStatusFilter = (status: string) => {
     if (assignmentFilter.value) {
         filters.assignment_type = assignmentFilter.value
     }
+    if (recontactFilter.value !== null) {
+        filters.has_recontact = recontactFilter.value
+    }
     
-    console.log('Status filter applied:', filters) // Debug log
     applyFiltersWithObject(filters)
 }
 
@@ -484,6 +499,7 @@ const toggleFavoriteFilter = () => {
     if (activeFilter.value !== 'all') filters.status = activeFilter.value
     if (favoriteFilter.value) filters.is_favorited = true
     if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    if (recontactFilter.value !== null) filters.has_recontact = recontactFilter.value
     
     applyFiltersWithObject(filters)
 }
@@ -503,18 +519,38 @@ const toggleAssignmentFilter = () => {
     if (activeFilter.value !== 'all') filters.status = activeFilter.value
     if (favoriteFilter.value) filters.is_favorited = true
     if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    if (recontactFilter.value !== null) filters.has_recontact = recontactFilter.value
+    
+    applyFiltersWithObject(filters)
+}
+
+const toggleRecontactFilter = () => {
+    if (recontactFilter.value === null) {
+        recontactFilter.value = true // Show only recontact leads
+    } else if (recontactFilter.value === true) {
+        recontactFilter.value = false // Show only non-recontact leads
+    } else {
+        recontactFilter.value = null // Show all leads
+    }
+    
+    // Rebuild filters
+    const filters: any = {}
+    if (searchQuery.value) filters.search = searchQuery.value
+    if (activeFilter.value !== 'all') filters.status = activeFilter.value
+    if (favoriteFilter.value) filters.is_favorited = true
+    if (assignmentFilter.value) filters.assignment_type = assignmentFilter.value
+    if (recontactFilter.value !== null) filters.has_recontact = recontactFilter.value
     
     applyFiltersWithObject(filters)
 }
 
 const clearAllFilters = () => {
-    console.log('Clearing all filters') // Debug log
-    
     // Reset semua filter UI
     searchQuery.value = ''
     activeFilter.value = 'all'
     favoriteFilter.value = false
     assignmentFilter.value = null
+    recontactFilter.value = null
     
     // Update query param
     updateQueryParam('all')
@@ -531,6 +567,11 @@ const getStatusCount = (status: string) => {
 const getAssignmentFilterLabel = () => {
     if (!assignmentFilter.value) return 'Tipe'
     return assignmentFilter.value === 'auto' ? 'Otomatis' : 'Manual'
+}
+
+const getRecontactFilterLabel = () => {
+    if (recontactFilter.value === null) return 'Recontact'
+    return recontactFilter.value ? 'Ada Recontact' : 'Belum Recontact'
 }
 
 const toggleFavorite = async (lead: any) => {
@@ -576,17 +617,6 @@ const getStatusBadgeClass = (status: string) => {
         'closing': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
     }
     return classes[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
-}
-
-const refreshLeads = async () => {
-    try {
-        const result = await leadsStore.refreshLeads()
-        if (result.success) {
-            toast.success('Data leads berhasil diperbarui', 'Refresh Berhasil')
-        }
-    } catch (error: any) {
-        toast.error('Gagal memperbarui data', 'Error')
-    }
 }
 
 // Head meta
