@@ -28,7 +28,7 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         public: {
-            apiBase: 'https://be-mutiara-bogor.go/api'
+            apiBase: 'https://adm-mutiarabogor.mutiaradevelopment.com/api'
         }
     },
     pwa: {

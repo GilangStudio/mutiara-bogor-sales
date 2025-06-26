@@ -19,7 +19,7 @@
         <ToastContainer />
 
         <PWAInstallButton />
-        <!-- <NotificationGuard /> -->
+        <NotificationGuard />
     </div>
 </template>
 

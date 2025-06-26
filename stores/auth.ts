@@ -11,7 +11,7 @@ export interface User {
 export interface LoginCredentials {
     phone: string
     password: string
-    token?: string
+    fcm_token?: string
 }
 
 export interface LoginResponse {
@@ -42,13 +42,32 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const config = useRuntimeConfig()
 
+                // Setup Firebase FCM sebelum login
+                let fcmToken = null;
+                if (process.client) {
+                    const firebaseService = useFirebaseService();
+                    if (firebaseService.isAvailable.value) {
+                        fcmToken = await firebaseService.getOrGenerateToken();
+                        console.log('FCM token for login:', fcmToken);
+                    }
+                }
+
                 const response = await $fetch<LoginResponse>(`${config.public.apiBase}/login`, {
                     method: 'POST',
-                    body: credentials
+                    body: {
+                        ...credentials,
+                        fcm_token: fcmToken
+                    }
                 })
 
                 if (response.status === 'success' && response.data) {
                     this.setAuthData(response.data)
+
+                    if (process.client && fcmToken) {
+                        const firebaseService = useFirebaseService();
+                        await firebaseService.sendTokenToBackend(fcmToken);
+                    }
+
                     return { success: true, data: response.data }
                 } else {
                     throw new Error(response.message || 'Login gagal')
@@ -69,6 +88,13 @@ export const useAuthStore = defineStore('auth', {
 
             try {
                 const config = useRuntimeConfig()
+
+                if (process.client) {
+                    const firebaseService = useFirebaseService();
+                    if (firebaseService.isAvailable.value) {
+                        await firebaseService.clearToken();
+                    }
+                }
 
                 if (this.token) {
                     try {
@@ -98,6 +124,77 @@ export const useAuthStore = defineStore('auth', {
                 await navigateTo('/login')
             } finally {
                 this.isLoading = false
+            }
+        },
+
+        // Method untuk update FCM token (bisa dipanggil kapan saja)
+        async updateFCMToken() {
+            if (!this.isAuthenticated || !process.client) {
+                return false;
+            }
+
+            try {
+                const firebaseService = useFirebaseService();
+                
+                if (!firebaseService.isAvailable.value) {
+                    console.warn('Firebase not available for FCM token update');
+                    return false;
+                }
+
+                // Generate atau ambil token yang ada
+                const token = await firebaseService.getOrGenerateToken();
+                
+                if (!token) {
+                    console.warn('Could not get FCM token for update');
+                    return false;
+                }
+
+                // Kirim token ke backend
+                const success = await firebaseService.sendTokenToBackend(token);
+                
+                if (success) {
+                    console.log('FCM token updated successfully');
+                    return true;
+                } else {
+                    console.error('Failed to update FCM token');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error updating FCM token:', error);
+                return false;
+            }
+        },
+
+        // Method untuk refresh FCM token secara berkala
+        async refreshFCMToken() {
+            if (!this.isAuthenticated || !process.client) {
+                return false;
+            }
+
+            try {
+                const firebaseService = useFirebaseService();
+                
+                if (!firebaseService.isAvailable.value) {
+                    return false;
+                }
+
+                // Refresh token (hapus yang lama, buat yang baru)
+                const newToken = await firebaseService.refreshToken();
+                
+                if (newToken) {
+                    // Kirim token baru ke backend
+                    const success = await firebaseService.sendTokenToBackend(newToken);
+                    
+                    if (success) {
+                        console.log('FCM token refreshed successfully');
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('Error refreshing FCM token:', error);
+                return false;
             }
         },
 

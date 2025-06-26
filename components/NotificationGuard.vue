@@ -1,5 +1,5 @@
 <template>
-    <!-- Notification Permission Modal -->
+    <!-- Notification Permission Modal dengan FCM -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
         <div class="bg-card border border-border rounded-lg w-full max-w-sm shadow-xl">
             <!-- Header -->
@@ -10,7 +10,7 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-semibold text-foreground">Aktifkan Notifikasi</h3>
-                        <p class="text-sm text-muted-foreground">Diperlukan untuk menggunakan aplikasi</p>
+                        <p class="text-sm text-muted-foreground">Diperlukan untuk fitur real-time</p>
                     </div>
                 </div>
             </div>
@@ -38,11 +38,11 @@
                 <!-- Permission Request Content -->
                 <div v-else>
                     <div class="mb-6">
-                        <h4 class="font-medium text-foreground mb-3">Mengapa notifikasi diperlukan?</h4>
+                        <h4 class="font-medium text-foreground mb-3">Manfaat notifikasi untuk Anda:</h4>
                         <ul class="space-y-2 text-sm text-muted-foreground">
                             <li class="flex items-start gap-2">
                                 <CheckCircle class="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                                <span>Mendapat info leads baru secara real-time</span>
+                                <span>Alert leads baru secara real-time</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <CheckCircle class="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
@@ -54,29 +54,50 @@
                             </li>
                             <li class="flex items-start gap-2">
                                 <CheckCircle class="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                                <span>Update sistem dan fitur terbaru</span>
+                                <span>Update fitur dan sistem terbaru</span>
                             </li>
                         </ul>
                     </div>
 
-                    <!-- Test Notification Success -->
-                    <div v-if="testSent" class="mb-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <!-- FCM Setup Progress -->
+                    <div v-if="isLoading" class="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <Loader2 class="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                            <div>
+                                <div class="text-sm font-medium text-blue-800 dark:text-blue-200">{{ setupProgress }}</div>
+                                <div class="text-xs text-blue-600 dark:text-blue-400">Mohon tunggu sebentar...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Setup Success -->
+                    <div v-if="setupComplete" class="mb-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
                         <div class="flex items-center gap-2">
                             <CheckCircle class="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span class="text-sm text-green-700 dark:text-green-300">
-                                Notifikasi test berhasil dikirim! 🎉
+                                Notifikasi berhasil diaktifkan! 🎉
                             </span>
                         </div>
                     </div>
 
-                    <!-- Privacy Notice -->
+                    <!-- FCM Technology Info -->
                     <div class="mb-6 p-3 bg-muted/30 rounded-lg">
                         <div class="flex items-start gap-2">
                             <Shield class="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                            <p class="text-xs text-muted-foreground">
-                                <strong>Privasi Terjamin:</strong> Notifikasi hanya untuk fitur aplikasi. 
-                                Kami tidak akan mengirim spam atau iklan.
-                            </p>
+                            <div>
+                                <p class="text-xs text-muted-foreground">
+                                    <strong>Teknologi Firebase:</strong> Menggunakan Firebase Cloud Messaging untuk notifikasi yang andal dan aman. 
+                                    Data Anda terlindungi dan tidak akan disalahgunakan.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div v-if="errorMessage" class="mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <AlertTriangle class="h-4 w-4 text-red-600 dark:text-red-400" />
+                            <span class="text-sm text-red-700 dark:text-red-300">{{ errorMessage }}</span>
                         </div>
                     </div>
                 </div>
@@ -95,11 +116,11 @@
                         @click="openBrowserSettings"
                         class="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        Buka Pengaturan Browser
+                        Panduan Pengaturan Browser
                     </button>
                 </div>
                 
-                <div v-else class="flex gap-3">
+                <div v-else-if="!setupComplete" class="flex gap-3">
                     <button 
                         @click="handleAllow"
                         :disabled="isLoading"
@@ -107,16 +128,26 @@
                     >
                         <Loader2 v-if="isLoading" class="h-4 w-4 animate-spin" />
                         <Bell v-else class="h-4 w-4" />
-                        {{ isLoading ? 'Memproses...' : 'Izinkan Notifikasi' }}
+                        {{ isLoading ? setupProgress : 'Aktifkan Notifikasi' }}
                     </button>
-                    
-                    <!-- Hide exit button - force user to enable notifications -->
-                    <!-- <button 
-                        @click="handleExit"
-                        class="px-4 py-3 border border-border text-foreground rounded-lg hover:bg-accent transition-colors"
+                </div>
+
+                <div v-else class="space-y-3">
+                    <button 
+                        @click="sendTestNotification"
+                        :disabled="isTestingSend"
+                        class="w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        Keluar
-                    </button> -->
+                        <Loader2 v-if="isTestingSend" class="h-4 w-4 animate-spin" />
+                        <Send v-else class="h-4 w-4" />
+                        {{ isTestingSend ? 'Mengirim...' : 'Test Notifikasi' }}
+                    </button>
+                    <button 
+                        @click="completeSetup"
+                        class="w-full py-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                        Lanjutkan ke Aplikasi
+                    </button>
                 </div>
             </div>
         </div>
@@ -126,64 +157,100 @@
 <script setup lang="ts">
 import { 
     Bell, CheckCircle, AlertTriangle, Shield, Loader2, 
-    ExternalLink, RefreshCw 
+    Send
 } from 'lucide-vue-next'
 
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const toast = useToast()
-const router = useRouter()
+const firebaseService = useFirebaseService()
 
 const isLoading = ref(false)
-const testSent = ref(false)
+const setupComplete = ref(false)
+const isTestingSend = ref(false)
+const errorMessage = ref('')
+const setupProgress = ref('Mempersiapkan...')
 
 // Show modal ketika notifikasi diperlukan tapi belum diizinkan
 const showModal = computed(() => {
     return notificationStore.hasChecked && 
            notificationStore.needsPermission &&
-           notificationStore.isSupported
+           notificationStore.isSupported &&
+           !setupComplete.value
 })
 
-// Handle allow notification
+// Handle allow notification dengan FCM setup
 const handleAllow = async () => {
     isLoading.value = true
+    errorMessage.value = ''
     
     try {
+        setupProgress.value = 'Meminta izin notifikasi...'
+        
+        // Request notification permission
         const granted = await notificationStore.requestPermission()
         
-        if (granted) {
-            // Kirim test notification
-            const testSuccess = await notificationStore.sendTestNotification()
-            if (testSuccess) {
-                testSent.value = true
-            }
-            
-            toast.success('Notifikasi berhasil diaktifkan!', 'Berhasil')
-            
-            // Auto close modal after success
-            setTimeout(() => {
-                testSent.value = false
-            }, 3000)
-        } else {
-            // Jika ditolak, tampilkan pesan
+        if (!granted) {
             if (notificationStore.isDenied) {
-                toast.error('Notifikasi diblokir. Silakan aktifkan dari pengaturan browser.', 'Akses Ditolak')
+                errorMessage.value = 'Notifikasi diblokir. Silakan aktifkan dari pengaturan browser.'
             } else {
-                toast.warning('Notifikasi diperlukan untuk menggunakan aplikasi', 'Akses Diperlukan')
+                errorMessage.value = 'Izin notifikasi diperlukan untuk menggunakan aplikasi'
             }
+            return
         }
-    } catch (error) {
+
+        setupProgress.value = 'Menyiapkan Firebase Cloud Messaging...'
+        
+        // Setup FCM
+        const fcmSuccess = await notificationStore.setupFCM()
+        
+        if (!fcmSuccess) {
+            errorMessage.value = 'Gagal menyiapkan sistem notifikasi. Silakan coba lagi.'
+            return
+        }
+
+        setupProgress.value = 'Menyelesaikan setup...'
+        
+        // Update FCM token ke backend jika user sudah login
+        if (authStore.isAuthenticated) {
+            await authStore.updateFCMToken()
+        }
+
+        setupComplete.value = true
+        toast.success('Notifikasi berhasil diaktifkan!', 'Berhasil')
+        
+    } catch (error: any) {
         console.error('Error enabling notifications:', error)
-        toast.error('Gagal mengaktifkan notifikasi', 'Error')
+        errorMessage.value = 'Terjadi kesalahan saat mengaktifkan notifikasi'
     } finally {
         isLoading.value = false
     }
 }
 
-// Handle exit - logout user
-const handleExit = async () => {
-    toast.info('Notifikasi diperlukan untuk menggunakan aplikasi', 'Akses Diperlukan')
-    await authStore.logout()
+// Send test notification
+const sendTestNotification = async () => {
+    isTestingSend.value = true
+    
+    try {
+        const success = await notificationStore.sendTestNotification()
+        
+        if (success) {
+            toast.success('Test notifikasi berhasil dikirim!', 'Berhasil')
+        } else {
+            toast.error('Gagal mengirim test notifikasi', 'Error')
+        }
+    } catch (error) {
+        console.error('Error sending test notification:', error)
+        toast.error('Gagal mengirim test notifikasi', 'Error')
+    } finally {
+        isTestingSend.value = false
+    }
+}
+
+// Complete setup and close modal
+const completeSetup = () => {
+    setupComplete.value = false // This will close the modal
+    toast.info('Setup notifikasi selesai. Selamat menggunakan aplikasi!', 'Siap Digunakan')
 }
 
 // Refresh page
@@ -193,9 +260,9 @@ const refreshPage = () => {
     }
 }
 
-// Open browser settings (limited browser support)
+// Open browser settings guide
 const openBrowserSettings = () => {
-    toast.info('Silakan buka pengaturan browser secara manual', 'Info')
+    toast.info('Silakan buka pengaturan browser dan cari menu "Site Settings" atau "Permissions" untuk mengaktifkan notifikasi', 'Panduan Pengaturan')
 }
 
 // Initialize notification store
