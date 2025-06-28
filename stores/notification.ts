@@ -116,6 +116,60 @@ export const useNotificationStore = defineStore('notification', {
             }
         },
 
+        async sendTestNotification() {
+            if (!this.isAllowed) {
+                console.warn('Permission notifikasi belum diberikan')
+                return false
+            }
+
+            try {
+                const firebaseService = useFirebaseService()
+                
+                // Coba kirim via FCM dulu
+                if (firebaseService.isAvailable.value && this.fcmInitialized) {
+                    // Note: Test notification biasanya dikirim dari backend
+                    // Di sini kita hanya bisa kirim local notification
+                    console.log('FCM is ready, test notification should be sent from backend')
+                }
+
+                // Kirim local notification sebagai test
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.ready
+                    
+                    await registration.showNotification('CRM Sales', {
+                        body: 'Notifikasi berhasil diaktifkan! 🎉',
+                        icon: '/pwa-192x192.png',
+                        badge: '/pwa-64x64.png',
+                        tag: 'test-notification',
+                        requireInteraction: false,
+                        data: {
+                            type: 'test',
+                            timestamp: Date.now()
+                        },
+                        actions: [
+                            {
+                                action: 'ok',
+                                title: 'OK'
+                            }
+                        ]
+                    })
+                    
+                    return true
+                }
+                
+                // Fallback ke Notification API biasa
+                new Notification('CRM Sales', {
+                    body: 'Notifikasi berhasil diaktifkan! 🎉',
+                    icon: '/pwa-192x192.png'
+                })
+                
+                return true
+            } catch (error) {
+                console.error('Error sending test notification:', error)
+                return false
+            }
+        },
+
         // Reset permission dan FCM (untuk testing)
         resetPermission() {
             if (process.client) {

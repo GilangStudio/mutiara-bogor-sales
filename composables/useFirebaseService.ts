@@ -17,7 +17,7 @@ export const useFirebaseService = () => {
   }));
 
   // VAPID key untuk FCM (ganti dengan key Anda sendiri)
-  const VAPID_KEY = 'BLZYHdw4v0QFiZvZcmTA9JnJ_ltyDyvRizsiSfiNsQjZvRJE9fPRS3SioAs47ytW8Poo0X7uTz--e42uObvIn5Y'; // Anda perlu generate VAPID key dari Firebase Console
+  const VAPID_KEY = 'BOe6F7V04UEONOTREuQItvjs9tkEYQD8WfEWSAifISPqQEgGgAbkrjgHj3qlVEZp5e0ZRUrZl0dIHhnqtHDeVpQ'; // Anda perlu generate VAPID key dari Firebase Console
 
   // Initialize Firebase Messaging
   const initialize = async (messaging: Messaging) => {

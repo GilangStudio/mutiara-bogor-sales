@@ -139,6 +139,18 @@
                         Bantuan & Informasi
                     </h3>
                     <div class="space-y-3">
+                        <div @click="navigateTo('/debug-firebase')"
+                            class="flex items-center justify-between hover:bg-accent/50 p-2 rounded-lg transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 bg-grey-100 dark:bg-grey-900/30 rounded-lg flex items-center justify-center">
+                                    <Bug class="h-4 w-4 text-grey-600 dark:text-grey-400" />
+                                </div>
+                                <span class="text-sm">Debug Firebase</span>
+                            </div>
+                            <ChevronRight class="h-4 w-4 text-muted-foreground" />
+                        </div>
+
                         <div @click="showGuide"
                             class="flex items-center justify-between hover:bg-accent/50 p-2 rounded-lg transition-colors cursor-pointer">
                             <div class="flex items-center gap-3">
@@ -224,7 +236,8 @@ import {
     HardDrive,
     BookOpen,
     MessageCircle,
-    LogOut
+    LogOut,
+    Bug
 } from 'lucide-vue-next'
 
 // Middleware untuk proteksi halaman
